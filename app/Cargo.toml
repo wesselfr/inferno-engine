@@ -8,3 +8,5 @@ edition = "2021"
 [lib]
 crate-type = ["dylib"]
 
+[dependencies]
+shared = { path = "../main/shared", features = ["import"] }

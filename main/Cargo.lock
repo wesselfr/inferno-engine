@@ -23,7 +23,12 @@ name = "main"
 version = "0.1.0"
 dependencies = [
  "libloading",
+ "shared",
 ]
+
+[[package]]
+name = "shared"
+version = "0.1.0"
 
 [[package]]
 name = "winapi"
