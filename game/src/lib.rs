@@ -18,6 +18,4 @@ pub fn update(test: &State)
     println!("Update");
     let handle = test.get_handle();
     test.draw(handle);
-    test.draw(handle + 1);
-    test.draw(handle + 2);
 }
