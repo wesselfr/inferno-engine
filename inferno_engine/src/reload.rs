@@ -55,7 +55,6 @@ pub fn should_reload(last_modified: SystemTime) -> bool {
         let modified = metadata.modified().unwrap();
 
         if modified > last_modified {
-            println!("== NEW VERSION FOUND ==");
             return true;
         }
         return false;
