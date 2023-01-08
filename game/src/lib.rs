@@ -1,11 +1,6 @@
 use shared::State;
 
 #[no_mangle]
-pub fn get_message() -> &'static str {
-    "Hello World!!"
-}
-
-#[no_mangle]
 pub fn setup(test: &State)
 {
     println!("Application version: {}", test.version);
@@ -13,9 +8,7 @@ pub fn setup(test: &State)
 }
 
 #[no_mangle]
-pub fn update(test: &State)
+pub fn update(test: &mut State)
 {
-    println!("Update");
-    let handle = test.get_handle();
-    test.draw(handle);
+    test.set_clear_color(0x103030ff);
 }
