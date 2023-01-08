@@ -4,8 +4,8 @@ use std::{fs, time::SystemTime};
 use libloading::Library;
 use shared::State;
 
-const LIB_PATH: &'static str = "../game/target/debug/game.dll";
-const LIB_PATH_ACTIVE: &'static str = "active/game.dll";
+const LIB_PATH: &str = "../game/target/debug/game.dll";
+const LIB_PATH_ACTIVE: &str = "active/game.dll";
 
 pub struct Application(pub Library);
 impl Application {
@@ -50,8 +50,9 @@ pub fn reload(mut app: Application) -> Application {
 
 pub fn should_reload(last_modified: SystemTime) -> bool {
     let metadata = std::fs::metadata(LIB_PATH);
-    if metadata.is_ok() {
-        let modified = metadata.unwrap().modified().unwrap();
+
+    if let Ok(metadata) = metadata {
+        let modified = metadata.modified().unwrap();
 
         if modified > last_modified {
             println!("== NEW VERSION FOUND ==");

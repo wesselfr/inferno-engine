@@ -1,6 +1,6 @@
-use std::time::SystemTime;
 use inferno_engine::{engine_draw, reload::*};
 use shared::State;
+use std::time::SystemTime;
 
 fn main() {
     let mut test = State {
