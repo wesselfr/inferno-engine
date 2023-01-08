@@ -80,7 +80,7 @@ fn main() {
         .create_window(
             WIDTH as _,
             HEIGHT as _,
-            "cubes.rs bgfx-rs example - ESC to close",
+            "Inferno Engine",
             glfw::WindowMode::Windowed,
         )
         .expect("Failed to create GLFW window.");
