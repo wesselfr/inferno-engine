@@ -1,12 +1,10 @@
 [package]
-name = "app"
+name = "inferno_engine"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
-[lib]
-crate-type = ["dylib"]
-
 [dependencies]
-shared = { path = "../main/shared", features = ["import"] }
+libloading = "0.7.4"
+shared = { path = "shared", features = ["export"] }

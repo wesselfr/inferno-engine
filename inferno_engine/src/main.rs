@@ -2,11 +2,11 @@ extern crate libloading;
 use std::fs;
 
 use libloading::Library;
-use main::engine_draw;
+use inferno_engine::engine_draw;
 use shared::State;
 
-const LIB_PATH: &'static str = "../app/target/debug/app.dll";
-const LIB_PATH_ACTIVE: &'static str = "active/app.dll";
+const LIB_PATH: &'static str = "../game/target/debug/game.dll";
+const LIB_PATH_ACTIVE: &'static str = "active/game.dll";
 struct Application(Library);
 impl Application {
     fn get_message(&self) -> &'static str {
