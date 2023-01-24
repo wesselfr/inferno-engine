@@ -16,7 +16,7 @@ impl State {
     pub fn draw(&self, handle: u32) {
         (self.draw_fn)(handle);
     }
-    pub fn set_clear_color(&mut self, color: u32){
+    pub fn set_clear_color(&mut self, color: u32) {
         self.clear_color = color;
     }
 }
