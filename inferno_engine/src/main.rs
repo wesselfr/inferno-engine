@@ -101,10 +101,9 @@ fn main() {
         window.poll_events();
 
         // Set clear color
+        let clear_color = u32_to_vec4(test.clear_color);
 
         unsafe {
-            let clear_color = u32_to_vec4(test.clear_color);
-            println!("Color: {:?}", clear_color);
             gl.clear_color(clear_color.x, clear_color.y, clear_color.z, clear_color.w);
             gl.clear(glow::COLOR_BUFFER_BIT);
             gl.draw_arrays(glow::TRIANGLES, 0, 3);
@@ -131,7 +130,11 @@ fn main() {
 }
 
 fn u32_to_vec4(val: u32) -> glam::Vec4 {
-    let raw:[u8;4] = val.to_be_bytes();
-    glam::vec4(raw[0] as f32 / 255.0, raw[1] as f32 / 255.0, raw[2] as f32 / 255.0, raw[3] as f32 / 255.0)
+    let raw: [u8; 4] = val.to_be_bytes();
+    glam::vec4(
+        raw[0] as f32 / 255.0,
+        raw[1] as f32 / 255.0,
+        raw[2] as f32 / 255.0,
+        raw[3] as f32 / 255.0,
+    )
 }
-
