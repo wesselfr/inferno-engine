@@ -1,6 +1,5 @@
-use bgfx_rs::bgfx::{
-    self, ClearFlags, Init, RendererType, ResetArgs, ResetFlags, SetViewClearArgs, DbgTextClearArgs, DebugFlags,
-};
+use glfw::Context;
+use glow::{self, HasContext};
 use inferno_engine::{engine_draw, reload::*, window::*};
 use shared::State;
 use std::time::SystemTime;
@@ -8,27 +7,11 @@ use std::time::SystemTime;
 const WIDTH: usize = 800;
 const HEIGHT: usize = 600;
 
-#[cfg(target_os = "linux")]
-fn get_render_type() -> RendererType {
-    RendererType::Vulkan
-}
-
-#[cfg(not(target_os = "linux"))]
-fn get_render_type() -> RendererType {
-    RendererType::Count
-}
-
-fn draw_text(x: u16, y: u16, text: &str)
-{
-    bgfx::dbg_text(x, y, 0x3f, text);
-}
-
 fn main() {
     let mut test = State {
         version: 1,
         test_string: "Hello World".to_string(),
         draw_fn: engine_draw,
-        text_draw_fn: draw_text,
         clear_color: 0x103030ff,
     };
 
@@ -44,36 +27,91 @@ fn main() {
         mode: glfw::WindowMode::Windowed,
     };
     let mut window: Window = Window::init(&settings);
+    window.handle.make_current();
+    let gl = unsafe {
+        glow::Context::from_loader_function(|s| window.handle.get_proc_address(s) as *const _)
+    };
 
-    let mut init = Init::new();
+    println!("GL VERSION: {:?}", gl.version());
+    let shader_version = "#version 410";
 
-    init.type_r = get_render_type();
-    init.resolution.width = WIDTH as u32;
-    init.resolution.height = HEIGHT as u32;
-    init.resolution.reset = ResetFlags::VSYNC.bits();
-    init.platform_data = get_platform_data(&window.handle);
+    unsafe {
+        let vertex_array = gl
+            .create_vertex_array()
+            .expect("Cannot create vertex array");
+        gl.bind_vertex_array(Some(vertex_array));
 
-    if !bgfx::init(&init) {
-        panic!("failed to init bgfx");
+        let program = gl.create_program().expect("Cannot create program");
+
+        let (vertex_shader_source, fragment_shader_source) = (
+            r#"const vec2 verts[3] = vec2[3](
+        vec2(0.5f, 1.0f),
+        vec2(0.0f, 0.0f),
+        vec2(1.0f, 0.0f)
+    );
+    out vec2 vert;
+    void main() {
+        vert = verts[gl_VertexID];
+        gl_Position = vec4(vert - 0.5, 0.0, 1.0);
+    }"#,
+            r#"precision mediump float;
+    in vec2 vert;
+    out vec4 color;
+    void main() {
+        color = vec4(vert, 0.5, 1.0);
+    }"#,
+        );
+
+        let shader_sources = [
+            (glow::VERTEX_SHADER, vertex_shader_source),
+            (glow::FRAGMENT_SHADER, fragment_shader_source),
+        ];
+
+        let mut shaders = Vec::with_capacity(shader_sources.len());
+
+        for (shader_type, shader_source) in shader_sources.iter() {
+            let shader = gl
+                .create_shader(*shader_type)
+                .expect("Cannot create shader");
+            gl.shader_source(shader, &format!("{}\n{}", shader_version, shader_source));
+            gl.compile_shader(shader);
+            if !gl.get_shader_compile_status(shader) {
+                panic!("{}", gl.get_shader_info_log(shader));
+            }
+            gl.attach_shader(program, shader);
+            shaders.push(shader);
+        }
+
+        gl.link_program(program);
+        if !gl.get_program_link_status(program) {
+            panic!("{}", gl.get_program_info_log(program));
+        }
+
+        for shader in shaders {
+            gl.detach_shader(program, shader);
+            gl.delete_shader(shader);
+        }
+
+        gl.use_program(Some(program));
+        gl.clear_color(0.1, 0.2, 0.3, 1.0);
     }
-
-    bgfx::set_debug(DebugFlags::TEXT.bits());
 
     let mut old_size = (0, 0);
     while !window.handle.should_close() {
         window.poll_events();
 
         // Set clear color
-        bgfx::set_view_clear(
-            0,
-            ClearFlags::COLOR.bits() | ClearFlags::DEPTH.bits(),
-            SetViewClearArgs {
-                rgba: test.clear_color,
-                ..Default::default()
-            },
-        );
 
-        
+        unsafe {
+            let clear_color = u32_to_vec4(test.clear_color);
+            println!("Color: {:?}", clear_color);
+            gl.clear_color(clear_color.x, clear_color.y, clear_color.z, clear_color.w);
+            gl.clear(glow::COLOR_BUFFER_BIT);
+            gl.draw_arrays(glow::TRIANGLES, 0, 3);
+            window.handle.swap_buffers();
+        }
+
+        // Reloading
         if should_reload(last_modified) {
             println!("== NEW VERSION FOUND ==");
             app = reload(app);
@@ -83,32 +121,17 @@ fn main() {
             app.setup(&test);
             app.update(&test);
         }
-        
+
         let size = window.handle.get_framebuffer_size();
-        
+
         if old_size != size {
-            bgfx::reset(size.0 as _, size.1 as _, ResetArgs::default());
             old_size = size;
         }
-        
-        bgfx::set_view_rect(0, 0, 0, size.0 as _, size.1 as _);
-        bgfx::touch(0);
-        bgfx::dbg_text_clear(DbgTextClearArgs::default());
-        
-        app.update(&test);
-        
-        bgfx::dbg_text(0, 1, 0x0f, "Color can be changed with ANSI \x1b[9;me\x1b[10;ms\x1b[11;mc\x1b[12;ma\x1b[13;mp\x1b[14;me\x1b[0m code too.");
-        bgfx::dbg_text(80, 1, 0x0f, "\x1b[;0m    \x1b[;1m    \x1b[; 2m    \x1b[; 3m    \x1b[; 4m    \x1b[; 5m    \x1b[; 6m    \x1b[; 7m    \x1b[0m");
-        bgfx::dbg_text(80, 2, 0x0f, "\x1b[;8m    \x1b[;9m    \x1b[;10m    \x1b[;11m    \x1b[;12m    \x1b[;13m    \x1b[;14m    \x1b[;15m    \x1b[0m");
-        bgfx::dbg_text(
-            0,
-            4,
-            0x3f,
-            "Description: Initialization and debug text with bgfx-rs Rust API.",
-        );
-        bgfx::dbg_text(0, 5, 0x3f, &test.test_string);
-
-        bgfx::frame(false);
     }
-    bgfx::shutdown();
 }
+
+fn u32_to_vec4(val: u32) -> glam::Vec4 {
+    let raw:[u8;4] = val.to_be_bytes();
+    glam::vec4(raw[0] as f32 / 255.0, raw[1] as f32 / 255.0, raw[2] as f32 / 255.0, raw[3] as f32 / 255.0)
+}
+

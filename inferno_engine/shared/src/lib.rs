@@ -5,7 +5,6 @@ pub struct State {
     pub version: u32,
     pub test_string: String,
     pub draw_fn: FnPtrU32,
-    pub text_draw_fn: FnPtrTextDraw,
     pub clear_color: u32,
 }
 
@@ -18,10 +17,6 @@ impl State {
     }
     pub fn draw(&self, handle: u32) {
         (self.draw_fn)(handle);
-    }
-    pub fn draw_text(&self, x:u16, y: u16, text: &str)
-    {
-        (self.text_draw_fn)(x,y,text);
     }
     pub fn set_clear_color(&mut self, color: u32) {
         self.clear_color = color;
