@@ -89,7 +89,6 @@ dependencies = [
  "glfw",
  "glow",
  "libloading",
- "raw-window-handle",
  "shared",
 ]
 

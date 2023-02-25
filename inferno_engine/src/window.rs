@@ -2,8 +2,6 @@ use std::sync::mpsc::Receiver;
 
 use glfw::Glfw;
 pub use glfw::{Window as WindowHandle, WindowEvent};
-use glow;
-use raw_window_handle::{HasRawWindowHandle, RawWindowHandle};
 
 pub struct WindowSettings<'a> {
     pub width: usize,
