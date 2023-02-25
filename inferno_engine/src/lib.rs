@@ -4,7 +4,6 @@
 pub mod reload;
 pub mod window;
 
-
 /// Draw an object using it's handle.
 /// # Example
 ///

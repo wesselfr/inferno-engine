@@ -1,7 +1,8 @@
-use std::sync::mpsc::Receiver;
-
+use glam::Vec4;
 use glfw::Glfw;
 pub use glfw::{Window as WindowHandle, WindowEvent};
+use glow::{self, Context, HasContext};
+use std::{sync::mpsc::Receiver, panic};
 
 pub struct WindowSettings<'a> {
     pub width: usize,
@@ -14,6 +15,7 @@ pub struct Window {
     pub handle: WindowHandle,
     pub events: Receiver<(f64, WindowEvent)>,
     glfw: Glfw,
+    gl: Context,
 }
 
 impl Window {
@@ -32,14 +34,33 @@ impl Window {
 
         handle.set_key_polling(true);
 
+        // TODO: Add some error handeling incase the glContext creation fails.
+        let gl = unsafe {
+            glow::Context::from_loader_function(|s| handle.get_proc_address(s) as *const _)
+        };
+
         Window {
             handle,
             events,
             glfw,
+            gl,
         }
     }
 
     pub fn poll_events(&mut self) {
         self.glfw.poll_events();
+    }
+
+    pub fn clear(&self, color: Vec4)
+    {
+        unsafe
+        {
+            self.gl.clear_color(color.x, color.y, color.z, color.w);
+            self.gl.clear(glow::COLOR_BUFFER_BIT);
+        }
+    }
+
+    pub fn context(&self) -> &Context {
+        &self.gl
     }
 }
