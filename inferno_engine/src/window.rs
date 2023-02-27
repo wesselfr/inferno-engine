@@ -2,7 +2,7 @@ use glam::Vec4;
 use glfw::Glfw;
 pub use glfw::{Window as WindowHandle, WindowEvent};
 use glow::{self, Context, HasContext};
-use std::{sync::mpsc::Receiver, panic};
+use std::sync::mpsc::Receiver;
 
 pub struct WindowSettings<'a> {
     pub width: usize,
@@ -51,10 +51,8 @@ impl Window {
         self.glfw.poll_events();
     }
 
-    pub fn clear(&self, color: Vec4)
-    {
-        unsafe
-        {
+    pub fn clear(&self, color: Vec4) {
+        unsafe {
             self.gl.clear_color(color.x, color.y, color.z, color.w);
             self.gl.clear(glow::COLOR_BUFFER_BIT);
         }
