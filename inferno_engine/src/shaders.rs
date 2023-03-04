@@ -37,11 +37,13 @@ pub fn load_default_shaders(
 ) -> [NativeShader; 2] {
     let shader_version = "#version 410";
     let (vertex_shader_source, fragment_shader_source) = (
-        r#"const vec2 verts[4] = vec2[4](
-        vec2(0.0f, 1.0f),
+        r#"const vec2 verts[6] = vec2[6](
         vec2(0.0f, 0.0f),
-        vec2(1.0f, 0.0f),
-        vec2(1.0f, 1.0f)
+        vec2(0.0f, 1.0f),
+        vec2(1.0f, 1.0f),
+        vec2(0.0f, 0.0f),
+        vec2(1.0f, 1.0f),
+        vec2(1.0f, 0.0f)
     );
     out vec2 vert;
     void main() {

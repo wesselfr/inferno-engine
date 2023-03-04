@@ -68,7 +68,7 @@ fn main() {
         window.clear(u32_to_vec4(test.clear_color));
 
         unsafe {
-            window.context().draw_arrays(glow::TRIANGLES, 0, 3);
+            window.context().draw_arrays(glow::TRIANGLES, 0, 6);
             window.handle.swap_buffers();
         }
 
