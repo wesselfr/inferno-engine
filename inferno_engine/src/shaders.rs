@@ -37,18 +37,12 @@ pub fn load_default_shaders(
 ) -> [NativeShader; 2] {
     let shader_version = "#version 410";
     let (vertex_shader_source, fragment_shader_source) = (
-        r#"const vec2 verts[6] = vec2[6](
-        vec2(0.0f, 0.0f),
-        vec2(0.0f, 1.0f),
-        vec2(1.0f, 1.0f),
-        vec2(0.0f, 0.0f),
-        vec2(1.0f, 1.0f),
-        vec2(1.0f, 0.0f)
-    );
-    out vec2 vert;
+        r#"
+        in vec2 _pos;
+        out vec2 vert;
     void main() {
-        vert = verts[gl_VertexID];
-        gl_Position = vec4(vert - 0.5, 0.0, 1.0);
+        vert = _pos;
+        gl_Position = vec4(_pos - 0.5, 0.0, 1.0);
     }"#,
         r#"precision mediump float;
     in vec2 vert;

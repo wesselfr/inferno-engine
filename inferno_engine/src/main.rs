@@ -1,5 +1,6 @@
+use glam::{vec2, Vec2};
 use glfw::Context;
-use glow::{self, HasContext};
+use glow::{self, HasContext, ARRAY_BUFFER, FLOAT_VEC2, STATIC_DRAW};
 use inferno_engine::{engine_draw, line::*, reload::*, shaders::load_default_shaders, window::*};
 use shared::State;
 use std::time::SystemTime;
@@ -31,11 +32,20 @@ fn main() {
     println!("GL VERSION: {:?}", window.context().version());
 
     unsafe {
-        let vertex_array = window
-            .context()
-            .create_vertex_array()
-            .expect("Cannot create vertex array");
-        window.context().bind_vertex_array(Some(vertex_array));
+        let vertices = [
+            vec2(0.0, 0.0),
+            vec2(0.0, 1.0),
+            vec2(1.0, 1.0),
+            vec2(0.0, 0.0),
+            vec2(1.0, 1.0),
+            vec2(1.0, 0.0),
+        ];
+        let vertices_u8 = std::slice::from_raw_parts(
+            vertices.as_ptr() as *const u8,
+            vertices.len() * std::mem::size_of::<Vec2>(),
+        );
+
+        let gl = window.context();
 
         let program = window
             .context()
@@ -49,6 +59,17 @@ fn main() {
             panic!("{}", window.context().get_program_info_log(program));
         }
 
+        // VBO
+        let vbo = gl.create_buffer().unwrap();
+        gl.bind_buffer(glow::ARRAY_BUFFER, Some(vbo));
+        gl.buffer_data_u8_slice(glow::ARRAY_BUFFER, vertices_u8, glow::STATIC_DRAW);
+
+        // VAO
+        let vao = gl.create_vertex_array().unwrap();
+        gl.bind_vertex_array(Some(vao));
+        gl.enable_vertex_attrib_array(0);
+        gl.vertex_attrib_pointer_f32(0, 2, glow::FLOAT, false, 8, 0);
+
         for shader in shaders {
             window.context().detach_shader(program, shader);
             window.context().delete_shader(shader);
@@ -57,8 +78,6 @@ fn main() {
         window.context().use_program(Some(program));
         window.context().clear_color(0.1, 0.2, 0.3, 1.0);
     }
-
-    let line = Line::new(None, window.context());
 
     let mut old_size = (0, 0);
     while !window.handle.should_close() {
