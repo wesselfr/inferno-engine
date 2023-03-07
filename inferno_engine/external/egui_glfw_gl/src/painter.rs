@@ -2,9 +2,8 @@ extern crate gl;
 
 use egui::{
     emath::Rect,
-    epaint::{Mesh, Primitive, self},
-    Color32, 
-    TextureFilter,
+    epaint::{self, Mesh, Primitive},
+    Color32, TextureFilter,
 };
 
 use gl::types::{GLchar, GLenum, GLint, GLsizeiptr, GLuint};

@@ -64,8 +64,7 @@ impl Window {
         &self.gl
     }
 
-    pub fn glfw_handle(&mut self) -> &mut WindowHandle
-    {
+    pub fn glfw_handle(&mut self) -> &mut WindowHandle {
         &mut self.handle
     }
 }

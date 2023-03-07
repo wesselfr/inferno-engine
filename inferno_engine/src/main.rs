@@ -1,10 +1,13 @@
+use egui_glfw_gl::{
+    egui::{self, Pos2, Rect},
+    Painter,
+};
 use glam::{vec2, Vec2};
-use glfw::{Context, flush_messages};
+use glfw::{flush_messages, Context};
 use glow::{self, HasContext, ARRAY_BUFFER, FLOAT_VEC2, STATIC_DRAW};
 use inferno_engine::{engine_draw, line::*, reload::*, shaders::load_default_shaders, window::*};
 use shared::State;
 use std::time::SystemTime;
-use egui_glfw_gl::{Painter, egui::{self, Rect, Pos2}};
 
 const WIDTH: usize = 800;
 const HEIGHT: usize = 600;
@@ -30,9 +33,8 @@ fn main() {
     };
     let mut window: Window = Window::init(&settings);
 
-    //let egui_ctx = egui::Context::default();
     println!("GL VERSION: {:?}", window.context().version());
-    
+
     let mut painter = egui_glfw_gl::Painter::new(&mut window.glfw_handle());
     let egui_ctx = egui::Context::default();
     let native_pixels_per_point = window.handle.get_content_scale().0;
@@ -146,8 +148,6 @@ fn main() {
             window.handle.swap_buffers();
         }
 
-
-
         // Reloading
         if should_reload(last_modified) {
             println!("== NEW VERSION FOUND ==");
@@ -172,8 +172,6 @@ fn main() {
                 }
             }
         }
-
-
     }
 }
 
