@@ -6,6 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+egui_glfw_gl = {path = "external/egui_glfw_gl"}
 glam = "0.23.0"
 glfw = "0.51.0"
 glow = "0.12.1"

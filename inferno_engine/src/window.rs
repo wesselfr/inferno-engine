@@ -33,6 +33,8 @@ impl Window {
             .expect("Failed to create GLFW window.");
 
         handle.set_key_polling(true);
+        handle.set_cursor_pos_polling(true);
+        handle.set_mouse_button_polling(true);
 
         // TODO: Add some error handeling incase the glContext creation fails.
         let gl = unsafe {
@@ -60,5 +62,10 @@ impl Window {
 
     pub fn context(&self) -> &Context {
         &self.gl
+    }
+
+    pub fn glfw_handle(&mut self) -> &mut WindowHandle
+    {
+        &mut self.handle
     }
 }
