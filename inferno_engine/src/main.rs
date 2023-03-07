@@ -163,6 +163,17 @@ fn main() {
 
         if old_size != size {
             old_size = size;
+
+            // Update egui sizes
+            painter.set_size(size.0 as u32, size.1 as u32);
+            egui_input_state = egui_glfw_gl::EguiInputState::new(egui::RawInput {
+                screen_rect: Some(Rect::from_min_size(
+                    Pos2::new(0f32, 0f32),
+                    egui::vec2(size.0 as f32, size.1 as f32) / native_pixels_per_point,
+                )),
+                pixels_per_point: Some(native_pixels_per_point),
+                ..Default::default()
+            });
         }
 
         for (_, event) in flush_messages(&window.events) {
