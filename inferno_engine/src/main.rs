@@ -5,7 +5,9 @@ use egui_glfw_gl::{
 use glam::{vec2, Vec2};
 use glfw::{flush_messages, Context};
 use glow::{self, HasContext, ARRAY_BUFFER, FLOAT_VEC2, STATIC_DRAW};
-use inferno_engine::{engine_draw, line::*, reload::*, shaders::load_default_shaders, window::*};
+use inferno_engine::{
+    engine_draw, primitives::quad::Quad, reload::*, shaders::load_default_shaders, window::*,
+};
 use shared::State;
 use std::time::SystemTime;
 
@@ -48,56 +50,7 @@ fn main() {
         ..Default::default()
     });
 
-    let program;
-    let vbo;
-    let vao;
-    unsafe {
-        let vertices = [
-            vec2(0.0, 0.0),
-            vec2(0.0, 1.0),
-            vec2(1.0, 1.0),
-            vec2(0.0, 0.0),
-            vec2(1.0, 1.0),
-            vec2(1.0, 0.0),
-        ];
-        let vertices_u8 = std::slice::from_raw_parts(
-            vertices.as_ptr() as *const u8,
-            vertices.len() * std::mem::size_of::<Vec2>(),
-        );
-
-        let gl = window.context();
-
-        program = window
-            .context()
-            .create_program()
-            .expect("Cannot create program");
-
-        let shaders = load_default_shaders(program, window.context());
-
-        window.context().link_program(program);
-        if !window.context().get_program_link_status(program) {
-            panic!("{}", window.context().get_program_info_log(program));
-        }
-
-        // VBO
-        vbo = gl.create_buffer().unwrap();
-        gl.bind_buffer(glow::ARRAY_BUFFER, Some(vbo));
-        gl.buffer_data_u8_slice(glow::ARRAY_BUFFER, vertices_u8, glow::STATIC_DRAW);
-
-        // VAO
-        vao = gl.create_vertex_array().unwrap();
-        gl.bind_vertex_array(Some(vao));
-        gl.enable_vertex_attrib_array(0);
-        gl.vertex_attrib_pointer_f32(0, 2, glow::FLOAT, false, 8, 0);
-
-        for shader in shaders {
-            window.context().detach_shader(program, shader);
-            window.context().delete_shader(shader);
-        }
-
-        window.context().use_program(Some(program));
-        window.context().clear_color(0.1, 0.2, 0.3, 1.0);
-    }
+    let quad = Quad::new(None, window.context());
 
     let mut old_size = (0, 0);
     while !window.handle.should_close() {
@@ -134,19 +87,13 @@ fn main() {
             shapes,
         } = egui_ctx.end_frame();
 
-        unsafe {
-            window.context().use_program(Some(program));
-            window.context().bind_buffer(glow::ARRAY_BUFFER, Some(vbo));
-            window.context().bind_vertex_array(Some(vao));
+        quad.render(window.context());
 
-            window.context().draw_arrays(glow::TRIANGLES, 0, 6);
+        // Egui
+        let clipped_shapes = egui_ctx.tessellate(shapes);
+        painter.paint_and_update_textures(1.0, &clipped_shapes, &textures_delta);
 
-            // Egui
-            let clipped_shapes = egui_ctx.tessellate(shapes);
-            painter.paint_and_update_textures(1.0, &clipped_shapes, &textures_delta);
-
-            window.handle.swap_buffers();
-        }
+        window.handle.swap_buffers();
 
         // Reloading
         if should_reload(last_modified) {

@@ -31,6 +31,30 @@ pub fn create_shader(
     Ok(shader)
 }
 
+pub fn create_default_program(context: &glow::Context) -> Result<glow::NativeProgram, String> {
+    unsafe {
+        let program = context.create_program();
+
+        // Early return on error.
+        program.as_ref()?;
+
+        let program = program.unwrap();
+        let shaders = load_default_shaders(program, context);
+        context.link_program(program);
+
+        if !context.get_program_link_status(program) {
+            return Err(context.get_program_info_log(program));
+        }
+
+        for shader in shaders {
+            context.detach_shader(program, shader);
+            context.delete_shader(shader);
+        }
+
+        Ok(program)
+    }
+}
+
 pub fn load_default_shaders(
     program: glow::NativeProgram,
     context: &glow::Context,

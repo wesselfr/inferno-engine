@@ -1,7 +1,7 @@
 //! # Inferno Engine
 //!
 //! Easy to use, rapid prototype engine written in Rust!
-pub mod line;
+pub mod primitives;
 pub mod reload;
 pub mod shaders;
 pub mod window;
