@@ -82,11 +82,38 @@ impl Quad {
             color,
         }
     }
-    pub fn render(&self, context: &Context) {
+
+    pub fn set_position(&mut self, position: Vec3) {
+        let (scale, rotation, _) = self.render_data.mvp.to_scale_rotation_translation();
+        let translation = position;
+        self.render_data.mvp = Mat4::from_scale_rotation_translation(scale, rotation, translation);
+    }
+
+    pub fn get_position(&self) -> Vec3
+    {
+        let (_, _, translation) = self.render_data.mvp.to_scale_rotation_translation();
+        translation
+    }
+
+    pub fn render(&mut self, context: &Context) {
+        // TODO: Given that the majority of function calls depends on the render_data, it might be worthwhile creating a trait for rendering.
         unsafe {
             context.use_program(self.render_data.shader_program);
             context.bind_buffer(glow::ARRAY_BUFFER, self.render_data.vbo);
             context.bind_vertex_array(self.render_data.vao);
+
+            let (scale, rotation, mut translation) =
+                self.render_data.mvp.to_scale_rotation_translation();
+            self.render_data.mvp =
+                Mat4::from_scale_rotation_translation(scale, rotation, translation);
+
+            let uniform_location =
+                context.get_uniform_location(self.render_data.shader_program.unwrap(), "_mvp");
+            context.uniform_matrix_4_f32_slice(
+                Some(&uniform_location.unwrap()),
+                false,
+                &self.render_data.mvp.to_cols_array(),
+            );
 
             context.draw_arrays(glow::TRIANGLES, 0, 6);
         }

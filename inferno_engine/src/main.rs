@@ -1,8 +1,8 @@
 use egui_glfw_gl::{
-    egui::{self, Pos2, Rect},
+    egui::{self, Pos2, Rect, Color32},
     Painter,
 };
-use glam::{vec2, Vec2};
+use glam::{vec2, Vec2, Vec3};
 use glfw::{flush_messages, Context};
 use glow::{self, HasContext, ARRAY_BUFFER, FLOAT_VEC2, STATIC_DRAW};
 use inferno_engine::{
@@ -37,7 +37,7 @@ fn main() {
 
     println!("GL VERSION: {:?}", window.context().version());
 
-    let mut painter = egui_glfw_gl::Painter::new(&mut window.glfw_handle());
+    let mut painter = egui_glfw_gl::Painter::new(window.glfw_handle());
     let egui_ctx = egui::Context::default();
     let native_pixels_per_point = window.handle.get_content_scale().0;
 
@@ -50,7 +50,8 @@ fn main() {
         ..Default::default()
     });
 
-    let quad = Quad::new(None, window.context());
+    let mut quad = Quad::new(None, window.context());
+    let mut new_quad_pos = Vec3::ZERO;
 
     let mut old_size = (0, 0);
     while !window.handle.should_close() {
@@ -78,6 +79,14 @@ fn main() {
             ui.separator();
             ui.label("A simple sine wave plotted onto a GL texture then blitted to an egui managed Image.");
             ui.label(" ");
+
+            ui.add(egui::Slider::new(&mut new_quad_pos.x, -1.0..=1.0).text("X"));
+            ui.add(egui::Slider::new(&mut new_quad_pos.y, -1.0..=1.0).text("Y"));
+            ui.add(egui::Slider::new(&mut new_quad_pos.z, -1.0..=1.0).text("Z"));
+            if ui.button("Set Position").clicked()
+            {
+                quad.set_position(new_quad_pos);
+            }
         });
 
         let egui::FullOutput {
@@ -124,10 +133,8 @@ fn main() {
         }
 
         for (_, event) in flush_messages(&window.events) {
-            match event {
-                _ => {
-                    egui_glfw_gl::handle_event(event, &mut egui_input_state);
-                }
+            {
+                egui_glfw_gl::handle_event(event, &mut egui_input_state);
             }
         }
     }

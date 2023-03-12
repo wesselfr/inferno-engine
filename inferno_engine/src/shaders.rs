@@ -63,10 +63,11 @@ pub fn load_default_shaders(
     let (vertex_shader_source, fragment_shader_source) = (
         r#"
         in vec2 _pos;
+        uniform mat4 _mvp;
         out vec2 vert;
     void main() {
         vert = _pos;
-        gl_Position = vec4(_pos - 0.5, 0.0, 1.0);
+        gl_Position = _mvp * vec4(_pos.x, _pos.y, 1.0, 1.0);
     }"#,
         r#"precision mediump float;
     in vec2 vert;
