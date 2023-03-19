@@ -1,5 +1,4 @@
 type FnPtrU32 = fn(u32);
-type FnPtrTextDraw = fn(u16, u16, &str);
 
 pub struct State {
     pub version: u32,

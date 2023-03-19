@@ -39,7 +39,7 @@ fn main() {
 
     let mut painter = egui_glfw_gl::Painter::new(window.glfw_handle());
     let egui_ctx = egui::Context::default();
-    let native_pixels_per_point = window.handle.get_content_scale().0;
+    let native_pixels_per_point = 1.0;
 
     let mut egui_input_state = egui_glfw_gl::EguiInputState::new(egui::RawInput {
         screen_rect: Some(Rect::from_min_size(
@@ -53,7 +53,7 @@ fn main() {
     let mut quad = Quad::new(None, window.context());
     let mut new_quad_pos = Vec3::ZERO;
 
-    let mut old_size = (0, 0);
+    let mut old_size = (0, 0); 
     while !window.handle.should_close() {
         window.poll_events();
         // Set clear color
