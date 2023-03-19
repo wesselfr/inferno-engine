@@ -1,11 +1,12 @@
 extern crate libloading;
-use std::{fs, time::SystemTime};
+use std::{fs, time::SystemTime, env::consts::{DLL_PREFIX, DLL_SUFFIX}};
 
+use const_format::formatcp;
 use libloading::Library;
 use shared::State;
 
-const LIB_PATH: &str = "../game/target/debug/game.dll";
-const LIB_PATH_ACTIVE: &str = "active/game.dll";
+const LIB_PATH: &str = formatcp!("../game/target/debug/{}game{}", DLL_PREFIX, DLL_SUFFIX);
+const LIB_PATH_ACTIVE: &str = formatcp!("active/{}game{}", DLL_PREFIX, DLL_SUFFIX);
 
 pub struct Application(pub Library);
 impl Application {
