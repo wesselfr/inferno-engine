@@ -1,5 +1,9 @@
 extern crate libloading;
-use std::{fs, time::SystemTime, env::consts::{DLL_PREFIX, DLL_SUFFIX}};
+use std::{
+    env::consts::{DLL_PREFIX, DLL_SUFFIX},
+    fs,
+    time::SystemTime,
+};
 
 use const_format::formatcp;
 use libloading::Library;
@@ -34,16 +38,13 @@ impl Application {
 }
 
 pub fn load_lib() -> Application {
-
     // Game dll does not exsist.
-    if fs::metadata(LIB_PATH).is_err()
-    {
+    if fs::metadata(LIB_PATH).is_err() {
         panic!("Game lib does not exsist. Be sure to build it first.");
     }
 
     // Active folder does not exsist.
-    if fs::metadata(LIB_PATH_ACTIVE).is_err()
-    {
+    if fs::metadata(LIB_PATH_ACTIVE).is_err() {
         fs::create_dir("active").expect("Error while creating active folder");
     }
 

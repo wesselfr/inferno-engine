@@ -1,10 +1,27 @@
-use std::num::NonZeroU32;
+use std::{fs, num::NonZeroU32};
 
 use glow::*;
 
-pub struct Shader<'a> {
+pub struct Shader {
     shader_type: u32,
-    shader_source: &'a str,
+    shader_source: String,
+}
+
+pub fn load_shader(path: &str, shader_type: u32) -> Option<Shader> {
+    let data = fs::read_to_string(path);
+
+    match data {
+        Ok(shader_source) => {
+            return Some(Shader {
+                shader_type,
+                shader_source,
+            })
+        }
+        Err(e) => {
+            println!("Error while loading shader file: {}", e);
+            return None;
+        }
+    }
 }
 
 pub fn create_shader(
@@ -90,7 +107,7 @@ pub fn load_default_shaders(
                 context,
                 &Shader {
                     shader_type: source.0,
-                    shader_source: source.1,
+                    shader_source: source.1.to_owned(),
                 },
                 shader_version,
             )

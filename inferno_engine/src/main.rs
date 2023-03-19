@@ -1,12 +1,8 @@
-use egui_glfw_gl::{
-    egui::{self, Pos2, Rect},
-};
-use glam::{Vec3};
+use egui_glfw_gl::egui::{self, Pos2, Rect};
+use glam::Vec3;
 use glfw::{flush_messages, Context};
 use glow::{self, HasContext};
-use inferno_engine::{
-    engine_draw, primitives::quad::Quad, reload::*, window::*,
-};
+use inferno_engine::{engine_draw, primitives::quad::Quad, reload::*, window::*};
 use shared::State;
 use std::time::SystemTime;
 
@@ -52,7 +48,7 @@ fn main() {
     let mut quad = Quad::new(None, window.context());
     let mut new_quad_pos = Vec3::ZERO;
 
-    let mut old_size = (0, 0); 
+    let mut old_size = (0, 0);
     while !window.handle.should_close() {
         window.poll_events();
         // Set clear color
