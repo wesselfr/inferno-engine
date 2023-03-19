@@ -1,12 +1,11 @@
 use egui_glfw_gl::{
-    egui::{self, Pos2, Rect, Color32},
-    Painter,
+    egui::{self, Pos2, Rect},
 };
-use glam::{vec2, Vec2, Vec3};
+use glam::{Vec3};
 use glfw::{flush_messages, Context};
-use glow::{self, HasContext, ARRAY_BUFFER, FLOAT_VEC2, STATIC_DRAW};
+use glow::{self, HasContext};
 use inferno_engine::{
-    engine_draw, primitives::quad::Quad, reload::*, shaders::load_default_shaders, window::*,
+    engine_draw, primitives::quad::Quad, reload::*, window::*,
 };
 use shared::State;
 use std::time::SystemTime;

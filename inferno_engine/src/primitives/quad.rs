@@ -1,7 +1,7 @@
 use glam::{vec2, Mat4, Vec2, Vec3, Vec4};
 use glow::*;
 
-use crate::shaders::{self, create_default_program, load_default_shaders};
+use crate::shaders::{create_default_program};
 
 struct RenderData {
     vbo: Option<NativeBuffer>,
@@ -102,7 +102,7 @@ impl Quad {
             context.bind_buffer(glow::ARRAY_BUFFER, self.render_data.vbo);
             context.bind_vertex_array(self.render_data.vao);
 
-            let (scale, rotation, mut translation) =
+            let (scale, rotation, translation) =
                 self.render_data.mvp.to_scale_rotation_translation();
             self.render_data.mvp =
                 Mat4::from_scale_rotation_translation(scale, rotation, translation);
