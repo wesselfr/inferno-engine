@@ -34,6 +34,19 @@ impl Application {
 }
 
 pub fn load_lib() -> Application {
+
+    // Game dll does not exsist.
+    if fs::metadata(LIB_PATH).is_err()
+    {
+        panic!("Game lib does not exsist. Be sure to build it first.");
+    }
+
+    // Active folder does not exsist.
+    if fs::metadata(LIB_PATH_ACTIVE).is_err()
+    {
+        fs::create_dir("active").expect("Error while creating active folder");
+    }
+
     fs::copy(LIB_PATH, LIB_PATH_ACTIVE).unwrap();
     let app: Application;
     unsafe {
