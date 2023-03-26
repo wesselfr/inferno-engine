@@ -4,6 +4,7 @@
 pub mod primitives;
 pub mod reload;
 pub mod shaders;
+pub mod texture;
 pub mod window;
 
 /// Draw an object using it's handle.

@@ -8,7 +8,7 @@ pub struct Shader {
 }
 
 /// Load shader from file
-/// 
+///
 /// returns a shader when file is found.
 pub fn load_shader(path: &str, shader_type: u32) -> Option<Shader> {
     let data = fs::read_to_string(path);
@@ -28,7 +28,7 @@ pub fn load_shader(path: &str, shader_type: u32) -> Option<Shader> {
 }
 
 /// Compiles a shader
-/// 
+///
 /// * `source`: Shader, can be loaded using `load_shader`
 /// * `shader_version`: optional shader version, pass here if not specified in shader file.
 pub fn create_shader(
