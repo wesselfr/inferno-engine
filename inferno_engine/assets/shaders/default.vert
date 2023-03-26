@@ -1,3 +1,4 @@
+#version 410
 in vec2 _pos;
 uniform mat4 _mvp;
 out vec2 vert;

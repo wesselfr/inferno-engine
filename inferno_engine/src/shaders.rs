@@ -7,6 +7,9 @@ pub struct Shader {
     shader_source: String,
 }
 
+/// Load shader from file
+/// 
+/// returns a shader when file is found.
 pub fn load_shader(path: &str, shader_type: u32) -> Option<Shader> {
     let data = fs::read_to_string(path);
 
@@ -24,10 +27,14 @@ pub fn load_shader(path: &str, shader_type: u32) -> Option<Shader> {
     }
 }
 
+/// Compiles a shader
+/// 
+/// * `source`: Shader, can be loaded using `load_shader`
+/// * `shader_version`: optional shader version, pass here if not specified in shader file.
 pub fn create_shader(
     context: &glow::Context,
     source: &Shader,
-    shader_version: &str,
+    shader_version: Option<&str>,
 ) -> Result<NativeShader, String> {
     let shader;
     unsafe {
@@ -35,10 +42,12 @@ pub fn create_shader(
             .create_shader(source.shader_type)
             .expect("Cannot create shader..");
 
-        context.shader_source(
-            shader,
-            &format!("{}\n{}", shader_version, source.shader_source),
-        );
+        let shader_source = match shader_version {
+            Some(version) => format!("{}\n{}", version, source.shader_source),
+            None => source.shader_source.to_owned(),
+        };
+
+        context.shader_source(shader, &shader_source);
 
         context.compile_shader(shader);
         if !context.get_shader_compile_status(shader) {
@@ -109,7 +118,7 @@ pub fn load_default_shaders(
                     shader_type: source.0,
                     shader_source: source.1.to_owned(),
                 },
-                shader_version,
+                Some(shader_version),
             )
             .expect("Error while creating default shader.");
 

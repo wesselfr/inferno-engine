@@ -1,3 +1,4 @@
+#version 410
 precision mediump float;
 in vec2 vert;
 out vec4 color;
