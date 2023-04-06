@@ -9,7 +9,11 @@ use const_format::formatcp;
 use libloading::Library;
 use shared::State;
 
-const LIB_PATH: &str = formatcp!("../game/target/debug/{}game{}", DLL_PREFIX, DLL_SUFFIX);
+const LIB_TARGET: &str = "debug";
+#[cfg(feature = "release")]
+const LIB_TARGET: &str = "release";
+
+const LIB_PATH: &str = formatcp!("../game/target/{}/{}game{}", LIB_TARGET, DLL_PREFIX, DLL_SUFFIX);
 const LIB_PATH_ACTIVE: &str = formatcp!("active/{}game{}", DLL_PREFIX, DLL_SUFFIX);
 
 pub struct Application(pub Library);
