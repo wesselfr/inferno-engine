@@ -81,6 +81,42 @@ pub fn create_default_program(context: &glow::Context) -> Result<glow::NativePro
     }
 }
 
+pub fn create_shader_program(
+    context: &glow::Context,
+    shaders: Vec<Shader>,
+) -> Result<glow::NativeProgram, String> {
+    unsafe {
+        let program = context.create_program();
+
+        // Early return on error.
+        program.as_ref()?;
+
+        let program = program.unwrap();
+        let mut native_shaders: Vec<NativeShader> = Vec::new();
+
+        for shader in &shaders {
+            let native_shader =
+                create_shader(context, shader, None).expect("Error while compiling shader");
+
+            context.attach_shader(program, native_shader);
+            native_shaders.push(native_shader);
+        }
+
+        context.link_program(program);
+
+        if !context.get_program_link_status(program) {
+            return Err(context.get_program_info_log(program));
+        }
+
+        for shader in &native_shaders {
+            context.detach_shader(program, *shader);
+            context.delete_shader(*shader);
+        }
+
+        Ok(program)
+    }
+}
+
 pub fn load_default_shaders(
     program: glow::NativeProgram,
     context: &glow::Context,

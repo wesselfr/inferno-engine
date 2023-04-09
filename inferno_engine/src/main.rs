@@ -2,7 +2,9 @@ use egui_glfw_gl::egui::{self, Pos2, Rect};
 use glam::Vec3;
 use glfw::{flush_messages, Context};
 use glow::{self, HasContext};
-use inferno_engine::{engine_draw, primitives::quad::Quad, reload::*, window::*};
+use inferno_engine::{
+    engine_draw, primitives::quad::Quad, reload::*, shaders::*, texture::*, window::*,
+};
 use shared::State;
 use std::time::SystemTime;
 
@@ -45,8 +47,31 @@ fn main() {
         ..Default::default()
     });
 
-    let mut quad = Quad::new(None, window.context());
+    let quad_shader = create_shader_program(
+        window.context(),
+        vec![
+            load_shader("assets/shaders/default.vert", glow::VERTEX_SHADER)
+                .expect("Error loading vertex shader"),
+            load_shader("assets/shaders/default.frag", glow::FRAGMENT_SHADER)
+                .expect("Error loading vertex shader"),
+        ],
+    )
+    .unwrap();
+
+    let mut quad_texture = Texture::new(window.context(), 512, 512);
+    quad_texture.set_texture_access(TextureAccess::WriteOnly);
+
+    let mut quad = Quad::new(Some(quad_shader), window.context());
     let mut new_quad_pos = Vec3::ZERO;
+
+    let mut ray_shader = create_shader_program(
+        window.context(),
+        vec![
+            load_shader("assets/shaders/compute_shader.comp", glow::COMPUTE_SHADER)
+                .expect("Error while loading compute shader"),
+        ],
+    )
+    .unwrap();
 
     let mut old_size = (0, 0);
     while !window.handle.should_close() {
@@ -82,6 +107,18 @@ fn main() {
             {
                 quad.set_position(new_quad_pos);
             }
+
+            if ui.button("Reload shader").clicked()
+            {
+                ray_shader = create_shader_program(
+                    window.context(),
+                    vec![
+                        load_shader("assets/shaders/compute_shader.comp", glow::COMPUTE_SHADER)
+                            .expect("Error while loading compute shader"),
+                    ],
+                )
+                .unwrap();
+            }
         });
 
         let egui::FullOutput {
@@ -90,6 +127,31 @@ fn main() {
             textures_delta,
             shapes,
         } = egui_ctx.end_frame();
+
+        // Compute shader
+        unsafe {
+            //glActiveTexture(GL_TEXTURE0);
+            window
+                .context()
+                .memory_barrier(glow::SHADER_STORAGE_BARRIER_BIT);
+            window.context().use_program(Some(ray_shader));
+            window.context().active_texture(glow::TEXTURE0);
+            quad_texture.set_texture_access(TextureAccess::WriteOnly);
+            //glBindTexture(GL_TEXTURE_2D, tex_output);
+            quad_texture.bind(window.context());
+
+            window.context().dispatch_compute(512, 512, 1);
+
+            window
+                .context()
+                .memory_barrier(glow::SHADER_STORAGE_BARRIER_BIT);
+        }
+
+        unsafe {
+            window.context().use_program(Some(quad_shader));
+            quad_texture.set_texture_access(TextureAccess::ReadOnly);
+            quad_texture.bind(window.context());
+        }
 
         quad.render(window.context());
 

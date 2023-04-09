@@ -2,11 +2,13 @@ use glam::{vec2, Mat4, Vec2, Vec3, Vec4};
 use glow::*;
 
 use crate::shaders::create_default_program;
+use crate::texture::Texture;
 
 struct RenderData {
     vbo: Option<NativeBuffer>,
     vao: Option<NativeVertexArray>,
     shader_program: Option<NativeProgram>,
+    texture: Option<Texture>,
     mvp: Mat4,
 }
 
@@ -22,6 +24,7 @@ impl Quad {
             vbo: None,
             vao: None,
             shader_program,
+            texture: None,
             mvp: Mat4::IDENTITY,
         };
 
@@ -33,6 +36,7 @@ impl Quad {
         }
 
         let vertices = [
+            // Position
             vec2(0.0, 0.0),
             vec2(0.0, 1.0),
             vec2(1.0, 1.0),
