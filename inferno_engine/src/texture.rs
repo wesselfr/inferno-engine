@@ -64,6 +64,25 @@ impl Texture {
         context.bind_image_texture(0, self.handle, 0, false, 0, access, glow::RGBA32F);
     }
 
+    pub fn resize(&mut self, context: &glow::Context, width: usize, height: usize) {
+        unsafe {
+            context.active_texture(glow::TEXTURE0);
+            self.width = width;
+            self.height = height;
+            context.tex_image_2d(
+                glow::TEXTURE_2D,
+                0,
+                glow::RGBA32F as i32,
+                width as i32,
+                height as i32,
+                0,
+                glow::RGBA,
+                glow::FLOAT,
+                None,
+            );
+        }
+    }
+
     pub fn from_file(path: &str) -> Option<Texture> {
         todo!("Loading texture from path not yet supported.");
     }

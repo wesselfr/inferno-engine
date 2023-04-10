@@ -136,11 +136,11 @@ fn main() {
                 .memory_barrier(glow::SHADER_STORAGE_BARRIER_BIT);
             window.context().use_program(Some(ray_shader));
             window.context().active_texture(glow::TEXTURE0);
-            quad_texture.set_texture_access(TextureAccess::WriteOnly);
+            quad_texture.set_texture_access(TextureAccess::ReadWrite);
             //glBindTexture(GL_TEXTURE_2D, tex_output);
             quad_texture.bind(window.context());
 
-            window.context().dispatch_compute(512, 512, 1);
+            window.context().dispatch_compute(old_size.0 as u32, old_size.1 as u32, 1);
 
             window
                 .context()
@@ -187,6 +187,15 @@ fn main() {
                 pixels_per_point: Some(native_pixels_per_point),
                 ..Default::default()
             });
+            
+            // Update texture
+            unsafe {
+                window.context().use_program(Some(quad_shader));
+                quad_texture.set_texture_access(TextureAccess::ReadOnly);
+                quad_texture.bind(window.context());
+                quad_texture.resize(window.context(), size.0 as usize, size.1 as usize);
+            }
+    
         }
 
         for (_, event) in flush_messages(&window.events) {
