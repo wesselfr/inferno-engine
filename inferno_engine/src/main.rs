@@ -11,6 +11,14 @@ use std::time::SystemTime;
 const WIDTH: usize = 800;
 const HEIGHT: usize = 600;
 
+const DEGREES_TO_RADIANS: f32 = 0.01745329;
+
+struct Sphere {
+    center: Vec3,
+    radius: f32,
+    color:f32,
+}
+
 fn main() {
     let mut test = State {
         version: 1,
@@ -100,13 +108,9 @@ fn main() {
             ui.label("A simple sine wave plotted onto a GL texture then blitted to an egui managed Image.");
             ui.label(" ");
 
-            ui.add(egui::Slider::new(&mut new_quad_pos.x, -1.0..=1.0).text("X"));
-            ui.add(egui::Slider::new(&mut new_quad_pos.y, -1.0..=1.0).text("Y"));
-            ui.add(egui::Slider::new(&mut new_quad_pos.z, -1.0..=1.0).text("Z"));
-            if ui.button("Set Position").clicked()
-            {
-                quad.set_position(new_quad_pos);
-            }
+            ui.add(egui::Slider::new(&mut new_quad_pos.x, -10.0..=10.0).text("X"));
+            ui.add(egui::Slider::new(&mut new_quad_pos.y, -10.0..=10.0).text("Y"));
+            ui.add(egui::Slider::new(&mut new_quad_pos.z, -10.0..=10.0).text("Z"));
 
             if ui.button("Reload shader").clicked()
             {
@@ -135,6 +139,23 @@ fn main() {
                 .context()
                 .memory_barrier(glow::SHADER_STORAGE_BARRIER_BIT);
             window.context().use_program(Some(ray_shader));
+
+            // Setup unforms
+            // TODO: Make use of an uniform buffer object to pass all the data at once.
+            let ctx = window.context();
+            
+            ctx.uniform_1_f32(ctx.get_uniform_location(ray_shader, "u_width").as_ref(), old_size.0 as f32);
+            ctx.uniform_1_f32(ctx.get_uniform_location(ray_shader, "u_height").as_ref(), old_size.1 as f32);
+            
+            ctx.uniform_3_f32(ctx.get_uniform_location(ray_shader, "camera_position").as_ref(), new_quad_pos.x, new_quad_pos.y, new_quad_pos.z);
+            ctx.uniform_3_f32(ctx.get_uniform_location(ray_shader, "camera_up").as_ref(), 0.0, 1.0, 0.0);
+            ctx.uniform_3_f32(ctx.get_uniform_location(ray_shader, "camera_forward").as_ref(), 0.0, 0.0, 1.0);
+            ctx.uniform_1_f32(ctx.get_uniform_location(ray_shader, "fov_y").as_ref(), 60.0 * DEGREES_TO_RADIANS);
+
+            ctx.uniform_3_f32(ctx.get_uniform_location(ray_shader, "sphere_center").as_ref(), 0.0, 0.0, 10.0);
+            ctx.uniform_1_f32(ctx.get_uniform_location(ray_shader, "sphere_radius").as_ref(), 3.0);
+            ctx.uniform_3_f32(ctx.get_uniform_location(ray_shader, "sphere_color").as_ref(), 0.0, 1.0, 1.0);
+
             window.context().active_texture(glow::TEXTURE0);
             quad_texture.set_texture_access(TextureAccess::ReadWrite);
             //glBindTexture(GL_TEXTURE_2D, tex_output);
