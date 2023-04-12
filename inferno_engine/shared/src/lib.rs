@@ -1,11 +1,19 @@
 type FnPtrU32 = fn(u32);
+
+// GRAPHICS
 type FnPtrLoadShader = fn(&Vec<ShaderDefinition>) -> Option<u32>;
+type FnPtrUniform1F32 = fn(u32, &str, f32);
+type FnPtrUniform2F32 = fn(u32, &str, f32, f32);
+type FnPtrUniform3F32 = fn(u32, &str, f32, f32, f32);
 
 pub struct State {
     pub version: u32,
     pub test_string: String,
     pub draw_fn: FnPtrU32,
     pub shader_load_fn: FnPtrLoadShader,
+    pub shader_uniform_1_f32: FnPtrUniform1F32,
+    pub shader_uniform_2_f32: FnPtrUniform2F32,
+    pub shader_uniform_3_f32: FnPtrUniform3F32,
     pub clear_color: u32,
 }
 
@@ -15,8 +23,7 @@ pub enum ShaderType {
     Compute,
 }
 
-pub struct ShaderDefinition
-{
+pub struct ShaderDefinition {
     pub path: String,
     pub shader_type: ShaderType,
 }
@@ -47,5 +54,13 @@ impl State {
 
     pub fn activate_shader(shader: Shader) {}
 
-    pub fn set_uniform_1_f32(shader: Shader, x: f32) {}
+    pub fn set_uniform_1_f32(&self, shader: Shader, field: &str, x: f32) {
+        (self.shader_uniform_1_f32)(shader, field, x);
+    }
+    pub fn set_uniform_2_f32(&self, shader: Shader, field: &str, x: f32, y: f32) {
+        (self.shader_uniform_2_f32)(shader, field, x, y);
+    }
+    pub fn set_uniform_3_f32(&self, shader: Shader, field: &str, x: f32, y: f32, z: f32) {
+        (self.shader_uniform_3_f32)(shader, field, x, y, z);
+    }
 }

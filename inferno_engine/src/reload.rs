@@ -44,6 +44,12 @@ impl Application {
             f(test)
         }
     }
+    pub fn draw(&self, test: &State) {
+        unsafe {
+            let f = self.0.get::<fn(&State)>(b"draw\0").unwrap();
+            f(test)
+        }
+    }
 }
 
 pub fn load_lib() -> Application {

@@ -5,8 +5,8 @@ use glow::{self, HasContext};
 use inferno_engine::{
     engine_draw, primitives::quad::Quad, reload::*, shaders::*, texture::*, window::*,
 };
-use shared::{State, ShaderDefinition};
-use std::{time::SystemTime, sync::Mutex};
+use shared::{ShaderDefinition, State};
+use std::{sync::Mutex, time::SystemTime};
 
 const WIDTH: usize = 800;
 const HEIGHT: usize = 600;
@@ -24,38 +24,61 @@ struct Sphere {
 static mut window: Option<Window> = None;
 static mut loaded_shaders: Vec<glow::NativeProgram> = Vec::new();
 
-fn api_load_shader(shader_definitions: &Vec<ShaderDefinition>)-> Option<u32>
-{
+fn api_load_shader(shader_definitions: &Vec<ShaderDefinition>) -> Option<u32> {
     let index;
-    unsafe{
+    unsafe {
+        let mut shaders: Vec<Shader> = Vec::new();
 
-    let mut shaders: Vec<Shader> = Vec::new();
+        for defintion in shader_definitions {
+            let shader_type = match defintion.shader_type {
+                shared::ShaderType::Vertex => glow::VERTEX_SHADER,
+                shared::ShaderType::Fragment => glow::FRAGMENT_SHADER,
+                shared::ShaderType::Compute => glow::COMPUTE_SHADER,
+            };
+            shaders.push(
+                load_shader(&defintion.path, shader_type).expect("Error while loading shader."),
+            );
+        }
 
-    for defintion in shader_definitions
-    {
-        let shader_type = match defintion.shader_type {
-            shared::ShaderType::Vertex => glow::VERTEX_SHADER,
-            shared::ShaderType::Fragment => glow::FRAGMENT_SHADER,
-            shared::ShaderType::Compute => glow::COMPUTE_SHADER,
-        };
-        shaders.push(load_shader(&defintion.path, shader_type).expect("Error while loading shader."));
-    }
-    
-    let program = create_shader_program(
-        &window.as_ref()?.context(),
-        vec![
-            load_shader("assets/shaders/default.vert", glow::VERTEX_SHADER)
-                .expect("Error loading vertex shader"),
-            load_shader("assets/shaders/default.frag", glow::FRAGMENT_SHADER)
-                .expect("Error loading vertex shader"),
-        ],
-    )
-    .unwrap();
+        let program = create_shader_program(
+            &window.as_ref()?.context(),
+            vec![
+                load_shader("assets/shaders/default.vert", glow::VERTEX_SHADER)
+                    .expect("Error loading vertex shader"),
+                load_shader("assets/shaders/default.frag", glow::FRAGMENT_SHADER)
+                    .expect("Error loading vertex shader"),
+            ],
+        )
+        .unwrap();
         loaded_shaders.push(program);
         index = loaded_shaders.len() as u32 - 1;
     }
 
     Some(index)
+}
+
+fn api_set_uniform_1_f32(shader: u32, field: &str, x: f32) {
+    unsafe {
+        let shader = loaded_shaders[shader as usize];
+        let ctx = window.as_ref().unwrap().context();
+        ctx.uniform_1_f32(ctx.get_uniform_location(shader, field).as_ref(), x);
+    }
+}
+
+fn api_set_uniform_2_f32(shader: u32, field: &str, x: f32, y: f32) {
+    unsafe {
+        let shader = loaded_shaders[shader as usize];
+        let ctx = window.as_ref().unwrap().context();
+        ctx.uniform_2_f32(ctx.get_uniform_location(shader, field).as_ref(), x, y);
+    }
+}
+
+fn api_set_uniform_3_f32(shader: u32, field: &str, x: f32, y: f32, z: f32) {
+    unsafe {
+        let shader = loaded_shaders[shader as usize];
+        let ctx = window.as_ref().unwrap().context();
+        ctx.uniform_3_f32(ctx.get_uniform_location(shader, field).as_ref(), x, y, z);
+    }
 }
 
 fn main() {
@@ -64,6 +87,9 @@ fn main() {
         test_string: "Hello World".to_string(),
         draw_fn: engine_draw,
         shader_load_fn: api_load_shader,
+        shader_uniform_1_f32: api_set_uniform_1_f32,
+        shader_uniform_2_f32: api_set_uniform_2_f32,
+        shader_uniform_3_f32: api_set_uniform_3_f32,
         clear_color: 0x103030ff,
     };
 
@@ -79,19 +105,27 @@ fn main() {
         mode: glfw::WindowMode::Windowed,
     };
 
-    unsafe{
+    unsafe {
         window = Some(Window::init(&settings));
     }
 
     let ctx;
-    unsafe{
-        ctx = window.as_ref().expect("Window was not initialized.").context();
+    unsafe {
+        ctx = window
+            .as_ref()
+            .expect("Window was not initialized.")
+            .context();
     }
     println!("GL VERSION: {:?}", ctx.version());
 
     let mut painter;
-    unsafe{
-        painter = egui_glfw_gl::Painter::new(window.as_mut().expect("Window not initalized.").glfw_handle());
+    unsafe {
+        painter = egui_glfw_gl::Painter::new(
+            window
+                .as_mut()
+                .expect("Window not initalized.")
+                .glfw_handle(),
+        );
     }
     let egui_ctx = egui::Context::default();
     let native_pixels_per_point = 1.0;
@@ -131,10 +165,14 @@ fn main() {
     )
     .unwrap();
 
+    unsafe {
+        loaded_shaders.push(ray_shader);
+    }
+
     let mut old_size = (0, 0);
 
     let window_handle;
-    unsafe{
+    unsafe {
         window_handle = window.as_mut().expect("Window was not set.");
     }
 
@@ -254,6 +292,8 @@ fn main() {
                 1.0,
             );
 
+            app.draw(&test);
+
             ctx.active_texture(glow::TEXTURE0);
             quad_texture.set_texture_access(TextureAccess::ReadWrite);
             //glBindTexture(GL_TEXTURE_2D, tex_output);
@@ -276,7 +316,7 @@ fn main() {
         let clipped_shapes = egui_ctx.tessellate(shapes);
         painter.paint_and_update_textures(1.0, &clipped_shapes, &textures_delta);
 
-        unsafe{
+        unsafe {
             window_handle.glfw_handle().swap_buffers();
         }
 
@@ -294,8 +334,8 @@ fn main() {
         app.update(&test);
 
         let size;
-        unsafe{
-             size = window_handle.glfw_handle().get_framebuffer_size();
+        unsafe {
+            size = window_handle.glfw_handle().get_framebuffer_size();
         }
 
         if old_size != size {

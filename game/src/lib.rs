@@ -28,4 +28,7 @@ pub fn update(test: &mut State) {
 }
 
 #[no_mangle]
-pub fn draw(test: &State) {}
+pub fn draw(test: &State) 
+{
+    test.set_uniform_1_f32(0, "sphere_radius", 3.3);
+}
