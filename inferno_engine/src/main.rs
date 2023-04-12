@@ -5,8 +5,8 @@ use glow::{self, HasContext};
 use inferno_engine::{
     engine_draw, primitives::quad::Quad, reload::*, shaders::*, texture::*, window::*,
 };
-use shared::State;
-use std::time::SystemTime;
+use shared::{State, ShaderDefinition};
+use std::{time::SystemTime, sync::Mutex};
 
 const WIDTH: usize = 800;
 const HEIGHT: usize = 600;
@@ -16,7 +16,46 @@ const DEGREES_TO_RADIANS: f32 = 0.01745329;
 struct Sphere {
     center: Vec3,
     radius: f32,
-    color:f32,
+    color: f32,
+}
+
+// Required for now. Needed for the bridge between game and engine.
+// TODO: Look into ways to get rid of these globals.
+static mut window: Option<Window> = None;
+static mut loaded_shaders: Vec<glow::NativeProgram> = Vec::new();
+
+fn api_load_shader(shader_definitions: &Vec<ShaderDefinition>)-> Option<u32>
+{
+    let index;
+    unsafe{
+
+    let mut shaders: Vec<Shader> = Vec::new();
+
+    for defintion in shader_definitions
+    {
+        let shader_type = match defintion.shader_type {
+            shared::ShaderType::Vertex => glow::VERTEX_SHADER,
+            shared::ShaderType::Fragment => glow::FRAGMENT_SHADER,
+            shared::ShaderType::Compute => glow::COMPUTE_SHADER,
+        };
+        shaders.push(load_shader(&defintion.path, shader_type).expect("Error while loading shader."));
+    }
+    
+    let program = create_shader_program(
+        &window.as_ref()?.context(),
+        vec![
+            load_shader("assets/shaders/default.vert", glow::VERTEX_SHADER)
+                .expect("Error loading vertex shader"),
+            load_shader("assets/shaders/default.frag", glow::FRAGMENT_SHADER)
+                .expect("Error loading vertex shader"),
+        ],
+    )
+    .unwrap();
+        loaded_shaders.push(program);
+        index = loaded_shaders.len() as u32 - 1;
+    }
+
+    Some(index)
 }
 
 fn main() {
@@ -24,6 +63,7 @@ fn main() {
         version: 1,
         test_string: "Hello World".to_string(),
         draw_fn: engine_draw,
+        shader_load_fn: api_load_shader,
         clear_color: 0x103030ff,
     };
 
@@ -38,11 +78,21 @@ fn main() {
         title: "Inferno Engine",
         mode: glfw::WindowMode::Windowed,
     };
-    let mut window: Window = Window::init(&settings);
 
-    println!("GL VERSION: {:?}", window.context().version());
+    unsafe{
+        window = Some(Window::init(&settings));
+    }
 
-    let mut painter = egui_glfw_gl::Painter::new(window.glfw_handle());
+    let ctx;
+    unsafe{
+        ctx = window.as_ref().expect("Window was not initialized.").context();
+    }
+    println!("GL VERSION: {:?}", ctx.version());
+
+    let mut painter;
+    unsafe{
+        painter = egui_glfw_gl::Painter::new(window.as_mut().expect("Window not initalized.").glfw_handle());
+    }
     let egui_ctx = egui::Context::default();
     let native_pixels_per_point = 1.0;
 
@@ -56,7 +106,7 @@ fn main() {
     });
 
     let quad_shader = create_shader_program(
-        window.context(),
+        &ctx,
         vec![
             load_shader("assets/shaders/default.vert", glow::VERTEX_SHADER)
                 .expect("Error loading vertex shader"),
@@ -66,14 +116,14 @@ fn main() {
     )
     .unwrap();
 
-    let mut quad_texture = Texture::new(window.context(), 512, 512);
+    let mut quad_texture = Texture::new(&ctx, 512, 512);
     quad_texture.set_texture_access(TextureAccess::WriteOnly);
 
-    let mut quad = Quad::new(Some(quad_shader), window.context());
+    let mut quad = Quad::new(Some(quad_shader), &ctx);
     let mut new_quad_pos = Vec3::ZERO;
 
     let mut ray_shader = create_shader_program(
-        window.context(),
+        &ctx,
         vec![
             load_shader("assets/shaders/compute_shader.comp", glow::COMPUTE_SHADER)
                 .expect("Error while loading compute shader"),
@@ -82,10 +132,18 @@ fn main() {
     .unwrap();
 
     let mut old_size = (0, 0);
-    while !window.handle.should_close() {
-        window.poll_events();
+
+    let window_handle;
+    unsafe{
+        window_handle = window.as_mut().expect("Window was not set.");
+    }
+
+    app.setup(&test);
+
+    while !window_handle.handle.should_close() {
+        window_handle.poll_events();
         // Set clear color
-        window.clear(u32_to_vec4(test.clear_color));
+        window_handle.clear(u32_to_vec4(test.clear_color));
         egui_ctx.begin_frame(egui_input_state.input.take());
         egui_input_state.input.pixels_per_point = Some(native_pixels_per_point);
 
@@ -115,7 +173,7 @@ fn main() {
             if ui.button("Reload shader").clicked()
             {
                 ray_shader = create_shader_program(
-                    window.context(),
+                    &ctx,
                     vec![
                         load_shader("assets/shaders/compute_shader.comp", glow::COMPUTE_SHADER)
                             .expect("Error while loading compute shader"),
@@ -135,52 +193,92 @@ fn main() {
         // Compute shader
         unsafe {
             //glActiveTexture(GL_TEXTURE0);
-            window
-                .context()
-                .memory_barrier(glow::SHADER_STORAGE_BARRIER_BIT);
-            window.context().use_program(Some(ray_shader));
+            ctx.memory_barrier(glow::SHADER_STORAGE_BARRIER_BIT);
+            ctx.use_program(Some(ray_shader));
 
             // Setup unforms
             // TODO: Make use of an uniform buffer object to pass all the data at once.
-            let ctx = window.context();
-            
-            ctx.uniform_1_f32(ctx.get_uniform_location(ray_shader, "u_width").as_ref(), old_size.0 as f32);
-            ctx.uniform_1_f32(ctx.get_uniform_location(ray_shader, "u_height").as_ref(), old_size.1 as f32);
-            
-            ctx.uniform_3_f32(ctx.get_uniform_location(ray_shader, "camera_position").as_ref(), new_quad_pos.x, new_quad_pos.y, new_quad_pos.z);
-            ctx.uniform_3_f32(ctx.get_uniform_location(ray_shader, "camera_up").as_ref(), 0.0, 1.0, 0.0);
-            ctx.uniform_3_f32(ctx.get_uniform_location(ray_shader, "camera_forward").as_ref(), 0.0, 0.0, 1.0);
-            ctx.uniform_1_f32(ctx.get_uniform_location(ray_shader, "fov_y").as_ref(), 60.0 * DEGREES_TO_RADIANS);
+            let ctx = ctx;
 
-            ctx.uniform_3_f32(ctx.get_uniform_location(ray_shader, "sphere_center").as_ref(), 0.0, 0.0, 10.0);
-            ctx.uniform_1_f32(ctx.get_uniform_location(ray_shader, "sphere_radius").as_ref(), 3.0);
-            ctx.uniform_3_f32(ctx.get_uniform_location(ray_shader, "sphere_color").as_ref(), 0.0, 1.0, 1.0);
+            ctx.uniform_1_f32(
+                ctx.get_uniform_location(ray_shader, "u_width").as_ref(),
+                old_size.0 as f32,
+            );
+            ctx.uniform_1_f32(
+                ctx.get_uniform_location(ray_shader, "u_height").as_ref(),
+                old_size.1 as f32,
+            );
 
-            window.context().active_texture(glow::TEXTURE0);
+            ctx.uniform_3_f32(
+                ctx.get_uniform_location(ray_shader, "camera_position")
+                    .as_ref(),
+                new_quad_pos.x,
+                new_quad_pos.y,
+                new_quad_pos.z,
+            );
+            ctx.uniform_3_f32(
+                ctx.get_uniform_location(ray_shader, "camera_up").as_ref(),
+                0.0,
+                1.0,
+                0.0,
+            );
+            ctx.uniform_3_f32(
+                ctx.get_uniform_location(ray_shader, "camera_forward")
+                    .as_ref(),
+                0.0,
+                0.0,
+                1.0,
+            );
+            ctx.uniform_1_f32(
+                ctx.get_uniform_location(ray_shader, "fov_y").as_ref(),
+                60.0 * DEGREES_TO_RADIANS,
+            );
+
+            ctx.uniform_3_f32(
+                ctx.get_uniform_location(ray_shader, "sphere_center")
+                    .as_ref(),
+                0.0,
+                0.0,
+                10.0,
+            );
+            ctx.uniform_1_f32(
+                ctx.get_uniform_location(ray_shader, "sphere_radius")
+                    .as_ref(),
+                3.0,
+            );
+            ctx.uniform_3_f32(
+                ctx.get_uniform_location(ray_shader, "sphere_color")
+                    .as_ref(),
+                0.0,
+                1.0,
+                1.0,
+            );
+
+            ctx.active_texture(glow::TEXTURE0);
             quad_texture.set_texture_access(TextureAccess::ReadWrite);
             //glBindTexture(GL_TEXTURE_2D, tex_output);
-            quad_texture.bind(window.context());
+            quad_texture.bind(&ctx);
 
-            window.context().dispatch_compute(old_size.0 as u32, old_size.1 as u32, 1);
+            ctx.dispatch_compute(old_size.0 as u32, old_size.1 as u32, 1);
 
-            window
-                .context()
-                .memory_barrier(glow::SHADER_STORAGE_BARRIER_BIT);
+            ctx.memory_barrier(glow::SHADER_STORAGE_BARRIER_BIT);
         }
 
         unsafe {
-            window.context().use_program(Some(quad_shader));
+            ctx.use_program(Some(quad_shader));
             quad_texture.set_texture_access(TextureAccess::ReadOnly);
-            quad_texture.bind(window.context());
+            quad_texture.bind(&ctx);
         }
 
-        quad.render(window.context());
+        quad.render(&ctx);
 
         // Egui
         let clipped_shapes = egui_ctx.tessellate(shapes);
         painter.paint_and_update_textures(1.0, &clipped_shapes, &textures_delta);
 
-        window.handle.swap_buffers();
+        unsafe{
+            window_handle.glfw_handle().swap_buffers();
+        }
 
         // Reloading
         if should_reload(last_modified) {
@@ -193,7 +291,12 @@ fn main() {
             app.update(&test);
         }
 
-        let size = window.handle.get_framebuffer_size();
+        app.update(&test);
+
+        let size;
+        unsafe{
+             size = window_handle.glfw_handle().get_framebuffer_size();
+        }
 
         if old_size != size {
             old_size = size;
@@ -208,18 +311,17 @@ fn main() {
                 pixels_per_point: Some(native_pixels_per_point),
                 ..Default::default()
             });
-            
+
             // Update texture
             unsafe {
-                window.context().use_program(Some(quad_shader));
-                quad_texture.set_texture_access(TextureAccess::ReadOnly);
-                quad_texture.bind(window.context());
-                quad_texture.resize(window.context(), size.0 as usize, size.1 as usize);
+                ctx.use_program(Some(quad_shader));
+                quad_texture.set_texture_access(TextureAccess::ReadWrite);
+                quad_texture.bind(&ctx);
+                quad_texture.resize(&ctx, size.0 as usize, size.1 as usize);
             }
-    
         }
 
-        for (_, event) in flush_messages(&window.events) {
+        for (_, event) in flush_messages(&window_handle.events) {
             {
                 egui_glfw_gl::handle_event(event, &mut egui_input_state);
             }

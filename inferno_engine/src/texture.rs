@@ -21,8 +21,8 @@ impl Texture {
             context.active_texture(glow::TEXTURE0);
             handle = context.create_texture().unwrap();
             context.bind_texture(glow::TEXTURE_2D, Some(handle));
-            context.texture_parameter_i32(handle, glow::TEXTURE_WRAP_S, glow::CLAMP_TO_EDGE as i32);
-            context.texture_parameter_i32(handle, glow::TEXTURE_WRAP_T, glow::CLAMP_TO_EDGE as i32);
+            context.texture_parameter_i32(handle, glow::TEXTURE_WRAP_S, glow::REPEAT as i32);
+            context.texture_parameter_i32(handle, glow::TEXTURE_WRAP_T, glow::REPEAT as i32);
             context.texture_parameter_i32(handle, glow::TEXTURE_MAG_FILTER, glow::LINEAR as i32);
             context.texture_parameter_i32(handle, glow::TEXTURE_MIN_FILTER, glow::LINEAR as i32);
             context.tex_image_2d(
