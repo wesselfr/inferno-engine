@@ -6,23 +6,18 @@ use inferno_engine::{
     engine_draw, primitives::quad::Quad, reload::*, shaders::*, texture::*, window::*,
 };
 use shared::{ShaderDefinition, State};
-use std::{sync::Mutex, time::SystemTime};
-
-const WIDTH: usize = 800;
-const HEIGHT: usize = 600;
+use std::{
+    sync::Mutex,
+    time::{Instant, SystemTime},
+};
 
 const DEGREES_TO_RADIANS: f32 = 0.01745329;
-
-struct Sphere {
-    center: Vec3,
-    radius: f32,
-    color: f32,
-}
 
 // Required for now. Needed for the bridge between game and engine.
 // TODO: Look into ways to get rid of these globals.
 static mut window: Option<Window> = None;
 static mut loaded_shaders: Vec<glow::NativeProgram> = Vec::new();
+static mut loaded_textures: Vec<glow::NativeTexture> = Vec::new();
 
 fn api_load_shader(shader_definitions: &Vec<ShaderDefinition>) -> Option<u32> {
     let index;
@@ -57,6 +52,14 @@ fn api_load_shader(shader_definitions: &Vec<ShaderDefinition>) -> Option<u32> {
     Some(index)
 }
 
+fn api_activate_shader(shader: u32) {
+    unsafe {
+        let shader = loaded_shaders[shader as usize];
+        let ctx = window.as_ref().unwrap().context();
+        ctx.use_program(Some(shader));
+    }
+}
+
 fn api_set_uniform_1_f32(shader: u32, field: &str, x: f32) {
     unsafe {
         let shader = loaded_shaders[shader as usize];
@@ -81,32 +84,45 @@ fn api_set_uniform_3_f32(shader: u32, field: &str, x: f32, y: f32, z: f32) {
     }
 }
 
-fn main() {
-    let mut test = State {
+// Extra API calls
+
+fn api_dispatch_compute(group_x: u32, group_y: u32, group_z: u32) {
+    unsafe {
+        let ctx = window.as_ref().unwrap().context();
+        ctx.memory_barrier(glow::SHADER_STORAGE_BARRIER_BIT);
+        ctx.dispatch_compute(group_x, group_y, group_z);
+    }
+}
+
+fn setup_api_state() -> State {
+    State {
         version: 1,
-        test_string: "Hello World".to_string(),
         draw_fn: engine_draw,
         shader_load_fn: api_load_shader,
+        shader_activate_fn: api_activate_shader,
         shader_uniform_1_f32: api_set_uniform_1_f32,
         shader_uniform_2_f32: api_set_uniform_2_f32,
         shader_uniform_3_f32: api_set_uniform_3_f32,
+        shader_dispatch_compute: api_dispatch_compute,
         clear_color: 0x103030ff,
-    };
+    }
+}
+
+fn main() {
+    let mut shared_state = setup_api_state();
 
     let mut app: Application;
     app = load_lib();
 
     let mut last_modified = SystemTime::now();
 
-    let settings = WindowSettings {
-        width: WIDTH,
-        height: HEIGHT,
-        title: "Inferno Engine",
-        mode: glfw::WindowMode::Windowed,
-    };
-
     unsafe {
-        window = Some(Window::init(&settings));
+        window = Some(Window::init(None));
+    }
+
+    let window_handle;
+    unsafe {
+        window_handle = window.as_mut().expect("Window was not set.");
     }
 
     let ctx;
@@ -131,10 +147,10 @@ fn main() {
     let native_pixels_per_point = 1.0;
 
     let mut egui_input_state = egui_glfw_gl::EguiInputState::new(egui::RawInput {
-        screen_rect: Some(Rect::from_min_size(
-            Pos2::new(0f32, 0f32),
-            egui::vec2(WIDTH as f32, HEIGHT as f32) / native_pixels_per_point,
-        )),
+        screen_rect: Some(Rect::from_min_size(Pos2::new(0f32, 0f32), {
+            let window_size: (usize, usize) = window_handle.get_size();
+            egui::vec2(window_size.0 as f32, window_size.1 as f32) / native_pixels_per_point
+        })),
         pixels_per_point: Some(native_pixels_per_point),
         ..Default::default()
     });
@@ -170,18 +186,17 @@ fn main() {
     }
 
     let mut old_size = (0, 0);
+    let mut dt = 0.0;
+    let mut frame_start_time = Instant::now();
 
-    let window_handle;
-    unsafe {
-        window_handle = window.as_mut().expect("Window was not set.");
-    }
-
-    app.setup(&test);
+    app.setup(&shared_state);
 
     while !window_handle.handle.should_close() {
+        frame_start_time = Instant::now();
+
         window_handle.poll_events();
         // Set clear color
-        window_handle.clear(u32_to_vec4(test.clear_color));
+        window_handle.clear(u32_to_vec4(shared_state.clear_color));
         egui_ctx.begin_frame(egui_input_state.input.take());
         egui_input_state.input.pixels_per_point = Some(native_pixels_per_point);
 
@@ -292,16 +307,12 @@ fn main() {
                 1.0,
             );
 
-            app.draw(&test);
-
+            // Bind screen texture.
             ctx.active_texture(glow::TEXTURE0);
             quad_texture.set_texture_access(TextureAccess::ReadWrite);
-            //glBindTexture(GL_TEXTURE_2D, tex_output);
             quad_texture.bind(&ctx);
 
-            ctx.dispatch_compute(old_size.0 as u32, old_size.1 as u32, 1);
-
-            ctx.memory_barrier(glow::SHADER_STORAGE_BARRIER_BIT);
+            app.draw(&shared_state);
         }
 
         unsafe {
@@ -316,27 +327,23 @@ fn main() {
         let clipped_shapes = egui_ctx.tessellate(shapes);
         painter.paint_and_update_textures(1.0, &clipped_shapes, &textures_delta);
 
-        unsafe {
-            window_handle.glfw_handle().swap_buffers();
-        }
+        window_handle.glfw_handle().swap_buffers();
 
         // Reloading
         if should_reload(last_modified) {
             println!("== NEW VERSION FOUND ==");
             app = reload(app);
             println!("== NEW VERSION LOADED ==");
-            test.version += 1;
+            shared_state.version += 1;
             last_modified = SystemTime::now();
-            app.setup(&test);
-            app.update(&test);
+            app.setup(&shared_state);
+            app.update(dt, &shared_state);
         }
 
-        app.update(&test);
+        app.update(dt, &shared_state);
 
         let size;
-        unsafe {
-            size = window_handle.glfw_handle().get_framebuffer_size();
-        }
+        size = window_handle.glfw_handle().get_framebuffer_size();
 
         if old_size != size {
             old_size = size;
@@ -366,6 +373,8 @@ fn main() {
                 egui_glfw_gl::handle_event(event, &mut egui_input_state);
             }
         }
+
+        dt = frame_start_time.elapsed().as_secs_f32();
     }
 }
 

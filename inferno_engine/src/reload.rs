@@ -32,22 +32,22 @@ impl Application {
             f()
         }
     }
-    pub fn setup(&self, test: &State) {
+    pub fn setup(&self, shared: &State) {
         unsafe {
             let f = self.0.get::<fn(&State)>(b"setup\0").unwrap();
-            f(test)
+            f(shared)
         }
     }
-    pub fn update(&self, test: &State) {
+    pub fn update(&self, dt: f32, shared: &State) {
         unsafe {
-            let f = self.0.get::<fn(&State)>(b"update\0").unwrap();
-            f(test)
+            let f = self.0.get::<fn(f32, &State)>(b"update\0").unwrap();
+            f(dt, shared)
         }
     }
-    pub fn draw(&self, test: &State) {
+    pub fn draw(&self, shared: &State) {
         unsafe {
             let f = self.0.get::<fn(&State)>(b"draw\0").unwrap();
-            f(test)
+            f(shared)
         }
     }
 }
