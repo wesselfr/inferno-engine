@@ -1,13 +1,11 @@
 use shared::*;
 
 struct GameState {
-    version: u32,
     time_passed: f32,
     test_color: (f32, f32, f32),
 }
 
-static mut game_state: GameState = GameState {
-    version: 1,
+static mut GAME_STATE: GameState = GameState {
     time_passed: 0.0,
     test_color: (0.0, 0.0, 0.0),
 };
@@ -29,9 +27,9 @@ pub fn update(dt: f32, shared: &mut State) {
     shared.set_clear_color(0x103030ff);
 
     unsafe {
-        game_state.time_passed += dt;
-        let time = game_state.time_passed;
-        game_state.test_color = (time.sin(), time.cos(), (time * 0.5).sin());
+        GAME_STATE.time_passed += dt;
+        let time = GAME_STATE.time_passed;
+        GAME_STATE.test_color = (time.sin(), time.cos(), (time * 0.5).sin());
     }
 }
 
@@ -40,7 +38,7 @@ pub fn draw(shared: &State) {
     shared.activate_shader(0);
     shared.set_uniform_1_f32(0, "sphere_radius", 3.0);
 
-    let color = unsafe { game_state.test_color };
+    let color = unsafe { GAME_STATE.test_color };
 
     shared.set_uniform_3_f32(0, "sphere_color", color.0, color.1, color.2);
     shared.dispatch_compute(512, 512, 1);

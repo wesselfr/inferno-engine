@@ -2,12 +2,11 @@ extern crate gl;
 
 use egui::{
     emath::Rect,
-    epaint::{self, Mesh, Primitive},
+    epaint::{Mesh, Primitive},
     Color32, TextureFilter,
 };
 
 use gl::types::{GLchar, GLenum, GLint, GLsizeiptr, GLuint};
-use glfw::Context;
 use std::ffi::{c_void, CString};
 
 fn compile_shader(src: &str, ty: GLenum) -> GLuint {

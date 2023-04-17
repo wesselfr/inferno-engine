@@ -15,14 +15,14 @@ pub fn load_shader(path: &str, shader_type: u32) -> Option<Shader> {
 
     match data {
         Ok(shader_source) => {
-            return Some(Shader {
+            Some(Shader {
                 shader_type,
                 shader_source,
             })
         }
         Err(e) => {
             println!("Error while loading shader file: {}", e);
-            return None;
+            None
         }
     }
 }
@@ -95,8 +95,12 @@ pub fn create_shader_program(
         let mut native_shaders: Vec<NativeShader> = Vec::new();
 
         for shader in &shaders {
-            let native_shader =
-                create_shader(context, shader, None).expect("Error while compiling shader");
+            let native_shader = create_shader(context, shader, None);
+
+            let native_shader = match native_shader {
+                Ok(shader) => shader,
+                Err(e) => return Err(format!("Shader compilation error: {:?}", e)),
+            };
 
             context.attach_shader(program, native_shader);
             native_shaders.push(native_shader);

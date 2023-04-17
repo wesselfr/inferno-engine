@@ -1,4 +1,3 @@
-use egui_glfw_gl::gl::MAX_HEIGHT;
 use glow::{HasContext, NativeTexture};
 
 pub struct Texture {

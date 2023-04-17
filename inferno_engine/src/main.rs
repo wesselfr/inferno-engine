@@ -7,7 +7,6 @@ use inferno_engine::{
 };
 use shared::{ShaderDefinition, State};
 use std::{
-    sync::Mutex,
     time::{Instant, SystemTime},
 };
 
@@ -15,9 +14,9 @@ const DEGREES_TO_RADIANS: f32 = 0.01745329;
 
 // Required for now. Needed for the bridge between game and engine.
 // TODO: Look into ways to get rid of these globals.
-static mut window: Option<Window> = None;
-static mut loaded_shaders: Vec<glow::NativeProgram> = Vec::new();
-static mut loaded_textures: Vec<glow::NativeTexture> = Vec::new();
+static mut WINDOW: Option<Window> = None;
+static mut LOADED_SHADERS: Vec<glow::NativeProgram> = Vec::new();
+static mut LOADED_TEXTURES: Vec<glow::NativeTexture> = Vec::new();
 
 fn api_load_shader(shader_definitions: &Vec<ShaderDefinition>) -> Option<u32> {
     let index;
@@ -36,7 +35,7 @@ fn api_load_shader(shader_definitions: &Vec<ShaderDefinition>) -> Option<u32> {
         }
 
         let program = create_shader_program(
-            &window.as_ref()?.context(),
+            WINDOW.as_ref()?.context(),
             vec![
                 load_shader("assets/shaders/default.vert", glow::VERTEX_SHADER)
                     .expect("Error loading vertex shader"),
@@ -45,8 +44,8 @@ fn api_load_shader(shader_definitions: &Vec<ShaderDefinition>) -> Option<u32> {
             ],
         )
         .unwrap();
-        loaded_shaders.push(program);
-        index = loaded_shaders.len() as u32 - 1;
+        LOADED_SHADERS.push(program);
+        index = LOADED_SHADERS.len() as u32 - 1;
     }
 
     Some(index)
@@ -54,32 +53,32 @@ fn api_load_shader(shader_definitions: &Vec<ShaderDefinition>) -> Option<u32> {
 
 fn api_activate_shader(shader: u32) {
     unsafe {
-        let shader = loaded_shaders[shader as usize];
-        let ctx = window.as_ref().unwrap().context();
+        let shader = LOADED_SHADERS[shader as usize];
+        let ctx = WINDOW.as_ref().unwrap().context();
         ctx.use_program(Some(shader));
     }
 }
 
 fn api_set_uniform_1_f32(shader: u32, field: &str, x: f32) {
     unsafe {
-        let shader = loaded_shaders[shader as usize];
-        let ctx = window.as_ref().unwrap().context();
+        let shader = LOADED_SHADERS[shader as usize];
+        let ctx = WINDOW.as_ref().unwrap().context();
         ctx.uniform_1_f32(ctx.get_uniform_location(shader, field).as_ref(), x);
     }
 }
 
 fn api_set_uniform_2_f32(shader: u32, field: &str, x: f32, y: f32) {
     unsafe {
-        let shader = loaded_shaders[shader as usize];
-        let ctx = window.as_ref().unwrap().context();
+        let shader = LOADED_SHADERS[shader as usize];
+        let ctx = WINDOW.as_ref().unwrap().context();
         ctx.uniform_2_f32(ctx.get_uniform_location(shader, field).as_ref(), x, y);
     }
 }
 
 fn api_set_uniform_3_f32(shader: u32, field: &str, x: f32, y: f32, z: f32) {
     unsafe {
-        let shader = loaded_shaders[shader as usize];
-        let ctx = window.as_ref().unwrap().context();
+        let shader = LOADED_SHADERS[shader as usize];
+        let ctx = WINDOW.as_ref().unwrap().context();
         ctx.uniform_3_f32(ctx.get_uniform_location(shader, field).as_ref(), x, y, z);
     }
 }
@@ -88,7 +87,7 @@ fn api_set_uniform_3_f32(shader: u32, field: &str, x: f32, y: f32, z: f32) {
 
 fn api_dispatch_compute(group_x: u32, group_y: u32, group_z: u32) {
     unsafe {
-        let ctx = window.as_ref().unwrap().context();
+        let ctx = WINDOW.as_ref().unwrap().context();
         ctx.memory_barrier(glow::SHADER_STORAGE_BARRIER_BIT);
         ctx.dispatch_compute(group_x, group_y, group_z);
     }
@@ -117,17 +116,17 @@ fn main() {
     let mut last_modified = SystemTime::now();
 
     unsafe {
-        window = Some(Window::init(None));
+        WINDOW = Some(Window::init(None));
     }
 
     let window_handle;
     unsafe {
-        window_handle = window.as_mut().expect("Window was not set.");
+        window_handle = WINDOW.as_mut().expect("Window was not set.");
     }
 
     let ctx;
     unsafe {
-        ctx = window
+        ctx = WINDOW
             .as_ref()
             .expect("Window was not initialized.")
             .context();
@@ -137,7 +136,7 @@ fn main() {
     let mut painter;
     unsafe {
         painter = egui_glfw_gl::Painter::new(
-            window
+            WINDOW
                 .as_mut()
                 .expect("Window not initalized.")
                 .glfw_handle(),
@@ -156,7 +155,7 @@ fn main() {
     });
 
     let quad_shader = create_shader_program(
-        &ctx,
+        ctx,
         vec![
             load_shader("assets/shaders/default.vert", glow::VERTEX_SHADER)
                 .expect("Error loading vertex shader"),
@@ -166,14 +165,14 @@ fn main() {
     )
     .unwrap();
 
-    let mut quad_texture = Texture::new(&ctx, 512, 512);
+    let mut quad_texture = Texture::new(ctx, 512, 512);
     quad_texture.set_texture_access(TextureAccess::WriteOnly);
 
-    let mut quad = Quad::new(Some(quad_shader), &ctx);
+    let mut quad = Quad::new(Some(quad_shader), ctx);
     let mut new_quad_pos = Vec3::ZERO;
 
     let mut ray_shader = create_shader_program(
-        &ctx,
+        ctx,
         vec![
             load_shader("assets/shaders/compute_shader.comp", glow::COMPUTE_SHADER)
                 .expect("Error while loading compute shader"),
@@ -182,7 +181,7 @@ fn main() {
     .unwrap();
 
     unsafe {
-        loaded_shaders.push(ray_shader);
+        LOADED_SHADERS.push(ray_shader);
     }
 
     let mut old_size = (0, 0);
@@ -225,14 +224,19 @@ fn main() {
 
             if ui.button("Reload shader").clicked()
             {
-                ray_shader = create_shader_program(
-                    &ctx,
+
+                let shader_source = load_shader("assets/shaders/compute_shader.comp", glow::COMPUTE_SHADER).expect("Error while reading shader source.");
+                let shader = create_shader_program(
+                    ctx,
                     vec![
-                        load_shader("assets/shaders/compute_shader.comp", glow::COMPUTE_SHADER)
-                            .expect("Error while loading compute shader"),
+                        shader_source,
                     ],
-                )
-                .unwrap();
+                );
+
+                match shader {
+                    Ok(shader) => {ray_shader = shader; println!("Shader reloaded!")},
+                    Err(e) => println!("Error while reloading shader: {:?}", e),
+                }
             }
         });
 
@@ -310,7 +314,7 @@ fn main() {
             // Bind screen texture.
             ctx.active_texture(glow::TEXTURE0);
             quad_texture.set_texture_access(TextureAccess::ReadWrite);
-            quad_texture.bind(&ctx);
+            quad_texture.bind(ctx);
 
             app.draw(&shared_state);
         }
@@ -318,10 +322,10 @@ fn main() {
         unsafe {
             ctx.use_program(Some(quad_shader));
             quad_texture.set_texture_access(TextureAccess::ReadOnly);
-            quad_texture.bind(&ctx);
+            quad_texture.bind(ctx);
         }
 
-        quad.render(&ctx);
+        quad.render(ctx);
 
         // Egui
         let clipped_shapes = egui_ctx.tessellate(shapes);
@@ -342,8 +346,7 @@ fn main() {
 
         app.update(dt, &shared_state);
 
-        let size;
-        size = window_handle.glfw_handle().get_framebuffer_size();
+        let size = window_handle.glfw_handle().get_framebuffer_size();
 
         if old_size != size {
             old_size = size;
@@ -363,8 +366,8 @@ fn main() {
             unsafe {
                 ctx.use_program(Some(quad_shader));
                 quad_texture.set_texture_access(TextureAccess::ReadWrite);
-                quad_texture.bind(&ctx);
-                quad_texture.resize(&ctx, size.0 as usize, size.1 as usize);
+                quad_texture.bind(ctx);
+                quad_texture.resize(ctx, size.0 as usize, size.1 as usize);
             }
         }
 
