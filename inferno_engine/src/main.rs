@@ -6,9 +6,7 @@ use inferno_engine::{
     engine_draw, primitives::quad::Quad, reload::*, shaders::*, texture::*, window::*,
 };
 use shared::{ShaderDefinition, State};
-use std::{
-    time::{Instant, SystemTime},
-};
+use std::time::{Instant, SystemTime};
 
 const DEGREES_TO_RADIANS: f32 = 0.01745329;
 
@@ -234,7 +232,12 @@ fn main() {
                 );
 
                 match shader {
-                    Ok(shader) => {ray_shader = shader; println!("Shader reloaded!")},
+                    Ok(shader) => {ray_shader = shader;
+                        unsafe{
+                            LOADED_SHADERS[0] = shader;
+                        }
+                        println!("Shader reloaded!");
+                    },
                     Err(e) => println!("Error while reloading shader: {:?}", e),
                 }
             }

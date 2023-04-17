@@ -14,12 +14,10 @@ pub fn load_shader(path: &str, shader_type: u32) -> Option<Shader> {
     let data = fs::read_to_string(path);
 
     match data {
-        Ok(shader_source) => {
-            Some(Shader {
-                shader_type,
-                shader_source,
-            })
-        }
+        Ok(shader_source) => Some(Shader {
+            shader_type,
+            shader_source,
+        }),
         Err(e) => {
             println!("Error while loading shader file: {}", e);
             None
