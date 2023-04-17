@@ -294,21 +294,28 @@ fn main() {
                 60.0 * DEGREES_TO_RADIANS,
             );
 
+            let clear_color = u32_to_vec4(shared_state.clear_color);
+
             ctx.uniform_3_f32(
-                ctx.get_uniform_location(ray_shader, "sphere_center")
+                ctx.get_uniform_location(ray_shader, "clear_color").as_ref(),
+                clear_color.x,
+                clear_color.y,
+                clear_color.z,
+            );
+
+            ctx.uniform_3_f32(
+                ctx.get_uniform_location(ray_shader, "voxel_center")
                     .as_ref(),
                 0.0,
                 0.0,
                 10.0,
             );
             ctx.uniform_1_f32(
-                ctx.get_uniform_location(ray_shader, "sphere_radius")
-                    .as_ref(),
+                ctx.get_uniform_location(ray_shader, "voxel_size").as_ref(),
                 3.0,
             );
             ctx.uniform_3_f32(
-                ctx.get_uniform_location(ray_shader, "sphere_color")
-                    .as_ref(),
+                ctx.get_uniform_location(ray_shader, "voxel_color").as_ref(),
                 0.0,
                 1.0,
                 1.0,
@@ -344,7 +351,6 @@ fn main() {
             shared_state.version += 1;
             last_modified = SystemTime::now();
             app.setup(&shared_state);
-            app.update(dt, &shared_state);
         }
 
         app.update(dt, &shared_state);

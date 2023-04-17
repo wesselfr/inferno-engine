@@ -36,10 +36,12 @@ pub fn update(dt: f32, shared: &mut State) {
 #[no_mangle]
 pub fn draw(shared: &State) {
     shared.activate_shader(0);
-    shared.set_uniform_1_f32(0, "sphere_radius", 3.0);
+    shared.set_uniform_1_f32(0, "voxel_size", unsafe {
+        (3.0 + GAME_STATE.time_passed.sin() * 3.0).max(0.5)
+    });
 
     let color = unsafe { GAME_STATE.test_color };
 
-    shared.set_uniform_3_f32(0, "sphere_color", color.0, color.1, color.2);
+    shared.set_uniform_3_f32(0, "voxel_color", color.0, color.1, color.2);
     shared.dispatch_compute(512, 512, 1);
 }
