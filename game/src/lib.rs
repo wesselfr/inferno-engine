@@ -26,18 +26,20 @@ pub fn setup(shared: &State) {
 pub fn update(dt: f32, shared: &mut State) {
     shared.set_clear_color(0x103030ff);
 
-    unsafe {
-        GAME_STATE.time_passed += dt;
-        let time = GAME_STATE.time_passed;
-        GAME_STATE.test_color = (time.sin(), time.cos(), (time * 0.5).sin());
-    }
+    let mut game_state: &mut GameState = unsafe {
+        &mut GAME_STATE
+    }; 
+
+    game_state.time_passed += dt;
+    let time = game_state.time_passed;
+    game_state.test_color = (time.sin(), time.cos(), (time * 0.5).sin());
 }
 
 #[no_mangle]
 pub fn draw(shared: &State) {
     shared.activate_shader(0);
     shared.set_uniform_1_f32(0, "voxel_size", unsafe {
-        (3.0 + GAME_STATE.time_passed.sin() * 3.0).max(0.5)
+        (3.0 + GAME_STATE.time_passed.sin() * 3.0).max(0.01)
     });
 
     let color = unsafe { GAME_STATE.test_color };
