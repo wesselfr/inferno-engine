@@ -1,5 +1,5 @@
 use egui_glfw_gl::egui::{self, Pos2, Rect};
-use glam::Vec3;
+use glam::{vec4, Vec3, Vec4};
 use glfw::{flush_messages, Context};
 use glow::{self, HasContext};
 use inferno_engine::{
@@ -105,6 +105,12 @@ fn setup_api_state() -> State {
     }
 }
 
+// TODO: Move this somewhere else, preferably game.
+struct Voxel {
+    pos: Vec4,
+    color: Vec4,
+}
+
 fn main() {
     let mut shared_state = setup_api_state();
 
@@ -180,6 +186,54 @@ fn main() {
 
     unsafe {
         LOADED_SHADERS.push(ray_shader);
+    }
+
+    let voxel_buffer;
+    unsafe {
+        voxel_buffer = ctx
+            .create_buffer()
+            .expect("Error while creating buffer object");
+        ctx.bind_buffer(glow::SHADER_STORAGE_BUFFER, Some(voxel_buffer));
+    };
+
+    let num_voxels = unsafe {
+        let window_size = WINDOW.as_ref().unwrap().get_size();
+        window_size.0 * window_size.1
+    };
+    let mut voxel_data = Vec::with_capacity(num_voxels);
+
+    for i in 0..num_voxels {
+        let sin = (i as f32).sin();
+        let cos = (i as f32).cos();
+        voxel_data.push(Voxel {
+            pos: vec4(
+                (i as f32 / 512.0) * 3.0,
+                (i as f32 % 512.0) * 3.0,
+                sin,
+                1.0
+            ),
+            color: vec4(sin, cos, sin * 0.5 + cos * 0.5, 1.0),
+        });
+    }
+
+    let voxel_size = std::mem::size_of::<Voxel>();
+    let voxel_data_size = num_voxels * voxel_size;
+    let voxel_data_ptr = voxel_data.as_ptr() as *const u8;
+    unsafe {
+        ctx.buffer_data_u8_slice(
+            glow::SHADER_STORAGE_BUFFER,
+            std::slice::from_raw_parts(voxel_data_ptr, voxel_data_size),
+            glow::DYNAMIC_DRAW,
+        );
+    }
+
+    let voxel_buffer_binding_index = 1;
+    unsafe {
+        ctx.bind_buffer_base(
+            glow::SHADER_STORAGE_BUFFER,
+            voxel_buffer_binding_index,
+            Some(voxel_buffer),
+        );
     }
 
     let mut old_size = (0, 0);
@@ -260,6 +314,10 @@ fn main() {
             // TODO: Make use of an uniform buffer object to pass all the data at once.
             let ctx = ctx;
 
+            ctx.uniform_1_u32(
+                ctx.get_uniform_location(ray_shader, "num_voxels").as_ref(),
+                num_voxels as u32,
+            );
             ctx.uniform_1_f32(
                 ctx.get_uniform_location(ray_shader, "u_width").as_ref(),
                 old_size.0 as f32,
@@ -268,7 +326,6 @@ fn main() {
                 ctx.get_uniform_location(ray_shader, "u_height").as_ref(),
                 old_size.1 as f32,
             );
-
             ctx.uniform_3_f32(
                 ctx.get_uniform_location(ray_shader, "camera_position")
                     .as_ref(),
@@ -325,6 +382,9 @@ fn main() {
             ctx.active_texture(glow::TEXTURE0);
             quad_texture.set_texture_access(TextureAccess::ReadWrite);
             quad_texture.bind(ctx);
+
+            // Bind voxel buffer
+            ctx.bind_buffer(glow::SHADER_STORAGE_BUFFER, Some(voxel_buffer));
 
             app.draw(&shared_state);
         }
